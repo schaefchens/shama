@@ -1,0 +1,58 @@
+{
+  "name": "@schaefchens/shama",
+  "version": "0.0.0",
+  "description": "Shama's pipeline in TypeScript: stages, push-to-talk and LIVE, offline and online, AI providers \u2013 over a platform's port",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schaefchens/shama.git",
+    "directory": "bindings/js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fake": {
+      "react-native": "./src/fake.ts",
+      "source": "./src/fake.ts",
+      "types": "./dist/fake.d.ts",
+      "default": "./dist/fake.js"
+    },
+    "./anthropic": {
+      "react-native": "./src/anthropic.ts",
+      "source": "./src/anthropic.ts",
+      "types": "./dist/anthropic.d.ts",
+      "default": "./dist/anthropic.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^1.5.0",
+    "typescript": "^6.0.3"
+  }
+}

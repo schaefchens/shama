@@ -1,0 +1,11 @@
+{
+  "name": "shama-workspace",
+  "private": true,
+  "workspaces": [
+    "bindings/js"
+  ],
+  "scripts": {
+    "build": "npm run build -w bindings/js",
+    "test": "npm test -w bindings/js"
+  }
+}
