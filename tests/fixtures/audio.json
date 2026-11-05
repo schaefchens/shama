@@ -9,6 +9,8 @@
     "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
   { "name": "fa-open", "language": "fa", "utterances": ["موبی دیک فصل سه را بخوان"],
     "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
+  { "name": "de-text", "language": "de", "text": true, "utterances": ["lies Faust Kapitel zwei"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "faust", "chapter": 2 } }] }] },
   { "name": "en-nothing", "language": "en", "utterances": [],
     "expect": [{ "kind": "unresolved", "reason": "nothingHeard" }] },
   { "name": "en-ai", "language": "en", "utterances": ["the one about the white whale"],

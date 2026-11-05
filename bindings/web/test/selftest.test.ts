@@ -21,6 +21,11 @@ function nodePort(core: Core): Port {
     setVocabulary: async (vocabulary) => JSON.parse(core.setVocabulary(JSON.stringify(vocabulary))),
     setTurn: (turn) => core.setTurn(JSON.stringify(turn)),
     async listen(options) {
+      if (options.text !== undefined) {
+        const events = core.listenText(JSON.stringify(options), options.text);
+        setTimeout(() => emit(events), 0);
+        return;
+      }
       const events = core.listenFile(JSON.stringify(options), readFileSync(options.file as string), undefined, undefined);
       setTimeout(() => emit(events), 0);
     },

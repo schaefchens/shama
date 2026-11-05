@@ -26,7 +26,7 @@ const voice = (i) => {
   return 0.05 * tone(140) + 0.03 * tone(280) + 0.02 * tone(560);
 };
 
-for (const fixture of cases) {
+for (const fixture of cases.filter((fixture) => !fixture.text)) {
   const samples = [];
   const transcripts = [];
   const add = (ms, said) => {

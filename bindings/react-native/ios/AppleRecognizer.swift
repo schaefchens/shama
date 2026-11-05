@@ -45,7 +45,7 @@ final class AppleRecognizer: PlatformRecognizer, @unchecked Sendable {
     guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: true),
       let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
       let channel = buffer.int16ChannelData?[0]
-    else { throw RecognizerError.Failed(message: "no audio buffer") }
+    else { throw RecognizerError.Failed(reason: "no audio buffer") }
     buffer.frameLength = AVAudioFrameCount(frames)
     audio.withUnsafeBytes { bytes in
       for i in 0..<frames { channel[i] = Int16(littleEndian: bytes.loadUnaligned(fromByteOffset: i * 2, as: Int16.self)) }
@@ -54,7 +54,7 @@ final class AppleRecognizer: PlatformRecognizer, @unchecked Sendable {
     request.endAudio()
 
     let done = DispatchSemaphore(value: 0)
-    var answer: Result<String, Error> = .failure(RecognizerError.Failed(message: "nothing heard"))
+    var answer: Result<String, Error> = .failure(RecognizerError.Failed(reason: "nothing heard"))
     let task = recognizer.recognitionTask(with: request) { result, error in
       if let result, result.isFinal {
         answer = .success(Self.readings(result))
@@ -69,12 +69,12 @@ final class AppleRecognizer: PlatformRecognizer, @unchecked Sendable {
     channel.update(repeating: 0, count: frames)
     if waited == .timedOut {
       task.cancel()
-      throw RecognizerError.Failed(message: "the recognizer took too long")
+      throw RecognizerError.Failed(reason: "the recognizer took too long")
     }
     do {
       return try answer.get()
     } catch {
-      throw RecognizerError.Failed(message: error.localizedDescription)
+      throw RecognizerError.Failed(reason: error.localizedDescription)
     }
   }
 

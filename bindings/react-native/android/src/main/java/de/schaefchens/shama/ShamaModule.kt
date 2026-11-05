@@ -85,13 +85,13 @@ class ShamaModule : Module() {
       onQueue { core.stop() }
     }
 
-    AsyncFunction("heard") { id: Int -> onQueue { core.heard(id.toUInt()) } }
+    AsyncFunction("heard") { id: Int -> onQueue { core.heard(utterance(id)) } }
 
-    Function("forget") { id: Int -> executor.execute { core.forget(id.toUInt()) } }
+    Function("forget") { id: Int -> executor.execute { core.forget(utterance(id)) } }
 
     AsyncFunction("finishCall") { call: String -> onQueue { core.finishCall(call) } }
 
-    AsyncFunction("aiRequest") { id: Int, options: String -> onQueue { core.aiRequest(id.toUInt(), options) } }
+    AsyncFunction("aiRequest") { id: Int, options: String -> onQueue { core.aiRequest(utterance(id), options) } }
 
     AsyncFunction("checkReply") { reply: String, options: String -> onQueue { core.checkReply(reply, options) } }
 
@@ -99,7 +99,7 @@ class ShamaModule : Module() {
 
     // The system's model gets the words heard here: they don't pass through JS.
     AsyncFunction("deviceAi") { id: Int, options: String, timeoutMs: Int ->
-      val request = onQueue { core.aiRequest(id.toUInt(), options) } ?: throw CodedException("Unavailable", "nothing heard to ask about", null)
+      val request = onQueue { core.aiRequest(utterance(id), options) } ?: throw CodedException("Unavailable", "nothing heard to ask about", null)
       DeviceModel.decide(request, timeoutMs)
     }
 
@@ -131,6 +131,17 @@ class ShamaModule : Module() {
     val options = JSONObject(json)
     val language = options.getString("language")
     stopCapture()
+    if (options.has("text")) {
+      val text = options.getString("text")
+      executor.execute {
+        try {
+          emit(core.listenText(json, text))
+        } catch (error: Exception) {
+          emit(JSONObject().put("event", "failed").put("message", error.message ?: error.toString()))
+        }
+      }
+      return
+    }
     val file = options.optString("file").takeIf { it.isNotEmpty() }
     if (file != null) {
       val path = file.removePrefix("file://")
@@ -156,12 +167,15 @@ class ShamaModule : Module() {
     }
     onQueue {
       held = false
-      core.listen(json, Capture.RATE.toUInt(), AndroidRecognizer(context))
+      core.listen(json, Capture.RATE_UNSIGNED, AndroidRecognizer(context))
     }
     capture.start()
     this.capture = capture
     if (live) emit(JSONObject().put("event", "echoCancellation").put("available", capture.echoCancelled))
   }
+
+  /** An utterance's id as the core takes it – kept out of Expo's DSL, which Kotlin's compiler trips over. */
+  private fun utterance(id: Int): UInt = id.toUInt()
 
   private fun stopCapture() {
     capture?.stop()

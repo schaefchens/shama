@@ -125,6 +125,20 @@ impl Listener {
         self.handle(endpoints)
     }
 
+    /// A text, settled as if it had been heard – the test path: no audio, the same stages after.
+    pub fn hear_text(&mut self, text: &str) -> Vec<ListenerEvent> {
+        let heard = Heard {
+            recognizer: "text".into(),
+            hypotheses: vec![Hypothesis { text: text.into(), confidence: None }],
+            speech_ms: 0,
+        };
+        let mut events = vec![ListenerEvent::Speech, ListenerEvent::Recognizing, self.settle(heard)];
+        if self.options.mode != Mode::Continuous {
+            events.push(ListenerEvent::Done);
+        }
+        events
+    }
+
     /// What was heard in an utterance, while it is kept: for a stage that needs the words.
     pub fn heard(&self, id: u64) -> Option<&[Hypothesis]> {
         self.kept.iter().find(|(kept, _)| *kept == id).map(|(_, readings)| readings.as_slice())
@@ -140,6 +154,24 @@ impl Listener {
         self.kept.clear();
         self.resampler.reset();
         self.endpointer = Endpointer::new(self.options.mode, self.options.endpointing.clone());
+    }
+
+    /// Readings settled for the moment the app is in, and kept for a later stage.
+    fn settle(&mut self, heard: Heard) -> ListenerEvent {
+        let settled = self.compiled.settle(&self.turn, &heard, &self.options.settle);
+        let id = self.next_id;
+        self.next_id += 1;
+        if self.kept.len() == KEPT {
+            self.kept.pop_front();
+        }
+        self.kept.push_back((id, heard.hypotheses.clone()));
+        ListenerEvent::Settled {
+            id,
+            recognizer: heard.recognizer,
+            speech_ms: heard.speech_ms,
+            settled,
+            heard: self.options.transcripts.then_some(heard.hypotheses),
+        }
     }
 
     fn handle(&mut self, endpoints: Vec<Endpoint>) -> Vec<ListenerEvent> {
@@ -160,20 +192,7 @@ impl Listener {
                                 hypotheses,
                                 speech_ms: utterance.speech_ms,
                             };
-                            let settled = self.compiled.settle(&self.turn, &heard, &self.options.settle);
-                            let id = self.next_id;
-                            self.next_id += 1;
-                            if self.kept.len() == KEPT {
-                                self.kept.pop_front();
-                            }
-                            self.kept.push_back((id, heard.hypotheses.clone()));
-                            events.push(ListenerEvent::Settled {
-                                id,
-                                recognizer: heard.recognizer,
-                                speech_ms: heard.speech_ms,
-                                settled,
-                                heard: self.options.transcripts.then_some(heard.hypotheses),
-                            });
+                            events.push(self.settle(heard));
                         }
                         Err(message) => events.push(ListenerEvent::Failed { message }),
                     }

@@ -12,6 +12,8 @@ export interface SelfTestCase {
   utterances: string[];
   live?: boolean;
   contexts?: string[];
+  /** Said as text, not played from a recording: the test path without audio. */
+  text?: boolean;
   /** A fake AI's answer, for a case meant to reach stage 3. */
   ai?: AiReply;
   expect: Partial<Result>[];
@@ -62,6 +64,7 @@ export async function selfTest(
 }
 
 async function run(shama: Shama, testCase: SelfTestCase, file: string): Promise<Result[]> {
+  if (testCase.text) return [await shama.start({ language: testCase.language, text: testCase.utterances[0] })];
   if (!testCase.live) return [await shama.start({ language: testCase.language, file })];
   const results: Result[] = [];
   const stopResults = shama.on('result', (result) => results.push(result));

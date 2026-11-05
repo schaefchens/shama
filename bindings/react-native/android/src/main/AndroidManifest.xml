@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-  <!-- Gemini Nano's client wants API 26; Shama calls it only there. -->
-  <uses-sdk tools:overrideLibrary="com.google.mlkit.genai.prompt" />
+  <!-- Gemini Nano's client and its common part want API 26; Shama calls them only there. -->
+  <uses-sdk tools:overrideLibrary="com.google.mlkit.genai.prompt,com.google.mlkit.genai.common" />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <queries>

@@ -123,6 +123,13 @@ impl Host {
         serde_json::to_string(&events).map_err(|e| e.to_string())
     }
 
+    /// Settles a text as if it had been heard – the test path – and returns what came of it as JSON.
+    pub fn listen_text(&mut self, options: &str, text: &str) -> Result<String, String> {
+        self.listen(options, crate::resample::RATE, Box::new(FixtureRecognizer::new(Vec::new())))?;
+        let Some(listener) = &mut self.listener else { return Ok("[]".into()) };
+        serde_json::to_string(&listener.hear_text(text)).map_err(|e| e.to_string())
+    }
+
     /// Takes microphone audio; what came of it as JSON.
     pub fn push(&mut self, samples: &[f32]) -> String {
         let events = self.listener.as_mut().map(|listener| listener.push(samples)).unwrap_or_default();

@@ -77,6 +77,8 @@ export interface StartOptions {
   endpointing?: Endpointing;
   transcripts?: boolean;
   file?: string;
+  /** Tests: a text settled as if it had been heard. */
+  text?: string;
 }
 
 export type LiveState = 'off' | 'listening' | 'speaking' | 'interruptOnly' | 'paused';
@@ -97,6 +99,7 @@ export interface LiveOptions {
   endpointing?: Endpointing;
   transcripts?: boolean;
   file?: string;
+  text?: string;
 }
 
 export interface ShamaEvents {
@@ -360,9 +363,9 @@ export function createShama(port: Port): Shama {
     return { kind: 'unresolved', reason, trail };
   }
 
-  /** The microphone's permission, asked for when listening first needs it – not for a file. */
-  async function microphone(file: string | undefined): Promise<void> {
-    if (file) return;
+  /** The microphone's permission, asked for when listening first needs it – not for a file or a text. */
+  async function microphone(options: { file?: string; text?: string }): Promise<void> {
+    if (options.file || options.text !== undefined) return;
     if (!(await port.requestPermission())) throw new ShamaError('permission', 'no permission to use the microphone');
   }
 
@@ -526,7 +529,7 @@ export function createShama(port: Port): Shama {
   const live: Live = {
     async start(options) {
       if (session) throw new ShamaError('busy', 'Shama is already listening');
-      await microphone(options.file);
+      await microphone(options);
       language = options.language;
       const current: LiveSession = {
         kind: 'live',
@@ -580,6 +583,7 @@ export function createShama(port: Port): Shama {
       echoCancellation,
       transcripts: options.transcripts,
       file: options.file,
+      text: options.text,
     };
   }
 
@@ -628,7 +632,7 @@ export function createShama(port: Port): Shama {
     requestPermission: () => port.requestPermission(),
     async start(options) {
       if (session) throw new ShamaError('busy', 'Shama is already listening');
-      await microphone(options.file);
+      await microphone(options);
       language = options.language;
       sync();
       await listeningStart();

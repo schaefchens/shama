@@ -45,6 +45,8 @@ export interface ListenOptions {
   transcripts?: boolean;
   /** Debug builds: audio from a WAV file instead of the microphone. */
   file?: string;
+  /** Tests: a text settled as if it had been heard, without audio. */
+  text?: string;
 }
 
 export type PortEvent =

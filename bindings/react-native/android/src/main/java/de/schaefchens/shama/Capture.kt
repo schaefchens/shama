@@ -103,5 +103,7 @@ class Capture(private val context: Context, private val live: Boolean, private v
 
   companion object {
     const val RATE = 16_000
+    /** The rate as the core takes it: written out, as Kotlin's compiler fails folding `RATE.toUInt()`. */
+    val RATE_UNSIGNED: UInt = 16_000u
   }
 }

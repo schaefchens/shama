@@ -22,8 +22,8 @@ pub enum CoreError {
 /// What a platform's recognizer couldn't hear, with why.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum RecognizerError {
-    #[error("{message}")]
-    Failed { message: String },
+    #[error("{reason}")]
+    Failed { reason: String },
 }
 
 /// A recognizer the platform brings – the system's, held on the device. Called on the queue that
@@ -104,6 +104,11 @@ impl ShamaCore {
         let wav = std::fs::read(&path).map_err(|e| CoreError::Invalid(format!("{path}: {e}")))?;
         let recognizer = recognizer.map(|recognizer| Box::new(Platform(recognizer)) as Box<dyn Recognizer>);
         self.host().listen_wav(&options, &wav, recognizer).map_err(CoreError::Invalid)
+    }
+
+    /// Settles a text as if it had been heard – the test path; what came of it as JSON.
+    pub fn listen_text(&self, options: String, text: String) -> Result<String, CoreError> {
+        self.host().listen_text(&options, &text).map_err(CoreError::Invalid)
     }
 
     /// Takes microphone audio, one channel at the listening rate; what came of it as JSON.

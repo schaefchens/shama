@@ -78,6 +78,10 @@ export function createWebPort(options: WebPortOptions = {}): Port {
       void call('setTurn', [JSON.stringify(turn)]);
     },
     async listen(listenOptions) {
+      if (listenOptions.text !== undefined) {
+        await call('listenText', [JSON.stringify(listenOptions), listenOptions.text]);
+        return;
+      }
       if (listenOptions.file) {
         await call('listenFile', [JSON.stringify(listenOptions), new URL(listenOptions.file, location.href).href]);
         return;

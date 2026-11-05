@@ -85,6 +85,12 @@ impl Core {
         self.0.listen_wav(options, wav, recognizer).map_err(error)
     }
 
+    /// Settles a text as if it had been heard – the test path; what came of it as JSON.
+    #[wasm_bindgen(js_name = listenText)]
+    pub fn listen_text(&mut self, options: &str, text: &str) -> Result<String, JsError> {
+        self.0.listen_text(options, text).map_err(error)
+    }
+
     /// Takes microphone audio; what came of it as JSON.
     pub fn push(&mut self, samples: &[f32]) -> String {
         self.0.push(samples)

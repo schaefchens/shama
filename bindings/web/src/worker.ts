@@ -69,6 +69,11 @@ async function handle(method: string, args: unknown[]): Promise<unknown> {
       setTimeout(() => post(events), 0);
       return null;
     }
+    case 'listenText': {
+      const events = c.listenText(args[0] as string, args[1] as string);
+      setTimeout(() => post(events), 0);
+      return null;
+    }
     case 'release':
       post(c.release());
       return null;

@@ -144,11 +144,22 @@ public class ShamaModule: Module {
     var mode: String
     var echoCancellation: Bool?
     var file: String?
+    var text: String?
   }
 
   private func listen(_ json: String) throws {
     let options = try JSONDecoder().decode(ListenOptions.self, from: Data(json.utf8))
     stopCapture()
+    if let text = options.text {
+      queue.async {
+        do {
+          self.emit(json: try self.core.listenText(options: json, text: text))
+        } catch {
+          self.emit(["event": "failed", "message": error.localizedDescription])
+        }
+      }
+      return
+    }
     if let file = options.file {
       let path = file.hasPrefix("file://") ? (URL(string: file)?.path ?? file) : file
       queue.async {
