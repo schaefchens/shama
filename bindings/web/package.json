@@ -22,7 +22,7 @@
     "build:wasm": "sh build.sh",
     "build": "sh build.sh && tsc && cp -R src/generated src/capture-worklet.js dist/",
     "typecheck": "tsc --noEmit",
-    "test": "node --conditions=source --test test/"
+    "test": "node --conditions=source --test \"test/*.test.ts\""
   },
   "dependencies": {
     "@schaefchens/shama": "*"

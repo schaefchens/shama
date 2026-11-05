@@ -78,8 +78,8 @@ pub fn read(bytes: &[u8]) -> Result<Wav, WavError> {
     }
     let channels = channels as usize;
     let frames: Vec<f32> = match (tag, bits) {
-        (1, 16) => data.chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0).collect(),
-        (3, 32) => data.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect(),
+        (1, 16) => data.as_chunks::<2>().0.iter().map(|b| i16::from_le_bytes(*b) as f32 / 32768.0).collect(),
+        (3, 32) => data.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect(),
         _ => return Err(WavError(format!("format {tag} with {bits} bits; 16-bit PCM or 32-bit float only"))),
     };
     let samples = frames.chunks_exact(channels).map(|frame| frame.iter().sum::<f32>() / channels as f32).collect();

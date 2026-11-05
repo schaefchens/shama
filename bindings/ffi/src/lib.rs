@@ -119,7 +119,7 @@ impl ShamaCore {
     /// Takes microphone audio as 16-bit little-endian PCM – what Android's recorder gives.
     pub fn push_pcm16(&self, pcm: Vec<u8>) -> String {
         let samples: Vec<f32> =
-            pcm.chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect();
+            pcm.as_chunks::<2>().0.iter().map(|b| f32::from(i16::from_le_bytes(*b)) / 32768.0).collect();
         self.host().push(&samples)
     }
 
