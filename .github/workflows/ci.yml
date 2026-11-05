@@ -23,6 +23,7 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
       - run: cargo fmt --all --check
+      - run: sh engines/sherpa/fetch.sh linux
       - run: cargo clippy --workspace --locked --all-targets -- -D warnings
       - run: cargo test --workspace --locked
 

@@ -1,0 +1,3 @@
+[env]
+# sherpa-onnx's native libraries: fetched and checked by engines/sherpa/fetch.sh, never by its build script.
+SHERPA_ONNX_ARCHIVE_DIR = { value = ".cache/sherpa-archives", relative = true }

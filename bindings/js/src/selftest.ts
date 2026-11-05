@@ -4,7 +4,7 @@
 
 import { fakeProvider } from './ai.ts';
 import type { Shama } from './shama.ts';
-import type { AiReply, Language, Result, Vocabulary } from './types.ts';
+import type { AiReply, Language, Localized, Result, Vocabulary } from './types.ts';
 
 export interface SelfTestCase {
   name: string;
@@ -14,8 +14,9 @@ export interface SelfTestCase {
   contexts?: string[];
   /** Said as text, not played from a recording: the test path without audio. */
   text?: boolean;
-  /** Spoken, and heard by the system's recognizer – skipped where it has none for the language. */
-  recognizer?: 'os';
+  /** Spoken, and heard by the system's recognizer or the embedded one – skipped where the
+   *  device has none for the language. */
+  recognizer?: 'os' | 'embedded';
   /** A fake AI's answer, for a case meant to reach stage 3. */
   ai?: AiReply;
   expect: Partial<Result>[];
@@ -31,7 +32,14 @@ export interface SelfTestReport {
 /** Runs the cases one after another; `file` gives each recording's URL or path. */
 export async function selfTest(
   shama: Shama,
-  options: { vocabulary: Vocabulary; cases: SelfTestCase[]; file: (name: string) => string; report?: (line: string) => void },
+  options: {
+    vocabulary: Vocabulary;
+    cases: SelfTestCase[];
+    file: (name: string) => string;
+    /** The embedded models' folders, for the cases heard by them. */
+    models?: Localized<string>;
+    report?: (line: string) => void;
+  },
 ): Promise<SelfTestReport> {
   const report: SelfTestReport = { passed: 0, failed: 0, skipped: 0, lines: [] };
   const line = (text: string) => {
@@ -39,11 +47,19 @@ export async function selfTest(
     options.report?.(text);
   };
   await shama.setVocabulary(options.vocabulary);
-  const support = options.cases.some((testCase) => testCase.recognizer) ? await shama.languages() : [];
+  const support = options.cases.some((testCase) => testCase.recognizer)
+    ? await shama.languages({ models: options.models })
+    : [];
   for (const testCase of options.cases) {
-    if (testCase.recognizer && support.find((s) => s.language === testCase.language)?.os !== 'ready') {
+    const here = support.find((s) => s.language === testCase.language);
+    if (testCase.recognizer === 'os' && here?.os !== 'ready') {
       report.skipped += 1;
       line(`– ${testCase.name}: no recognizer on board for ${testCase.language}`);
+      continue;
+    }
+    if (testCase.recognizer === 'embedded' && here?.embedded !== 'installed') {
+      report.skipped += 1;
+      line(`– ${testCase.name}: no embedded model for ${testCase.language}`);
       continue;
     }
     shama.reset();

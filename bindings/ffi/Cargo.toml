@@ -13,6 +13,8 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 shama = { path = "../.." }
+shama-sherpa = { path = "../../engines/sherpa" }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 uniffi = "0.31"

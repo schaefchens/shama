@@ -1,0 +1,20 @@
+[package]
+name = "shama-sherpa"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Shama's embedded recognizer: speech models run by sherpa-onnx, inside the app"
+publish = false
+
+[dependencies]
+shama = { path = "../.." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# sherpa-onnx's native libraries come from .cache/sherpa-archives, fetched and checked by fetch.sh
+# (.cargo/config.toml points there): static on desktops, shared on iOS and Android.
+[target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
+sherpa-onnx = { version = "=2.0.1", default-features = false, features = ["static"] }
+
+[target.'cfg(any(target_os = "ios", target_os = "android"))'.dependencies]
+sherpa-onnx = { version = "=2.0.1", default-features = false, features = ["shared"] }

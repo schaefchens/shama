@@ -1,7 +1,8 @@
 import { Asset } from 'expo-asset';
+import { Paths } from 'expo-file-system';
 import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { fakeProvider, selfTest } from '@schaefchens/shama';
 import type { Language, Mode, Result, SelfTestCase, Vocabulary } from '@schaefchens/shama';
@@ -161,6 +162,13 @@ function Demo({ onSelfTest }: { onSelfTest: () => void }) {
   );
 }
 
+/** Where tools/e2e_react_native.sh puts embedded models: the app's documents on iOS, its external
+ *  files on Android, which adb can write to. */
+const modelsFolder =
+  Platform.OS === 'ios'
+    ? `${Paths.document.uri.replace(/\/$/, '')}/shama-models`
+    : 'file:///storage/emulated/0/Android/data/de.schaefchens.shama.example/files/shama-models';
+
 /** The fixture recordings through this device's native module and core. */
 function SelfTest() {
   const shama = useShama();
@@ -178,6 +186,7 @@ function SelfTest() {
         vocabulary,
         cases: cases as SelfTestCase[],
         file: (name) => paths[name],
+        models: Object.fromEntries(['en', 'de', 'tr', 'ar', 'fa'].map((language) => [language, `${modelsFolder}/${language}`])),
         report: (line) => current && setLines((all) => [...all, line]),
       });
       if (current) setResult(`${report.failed === 0 ? 'passed' : 'failed'}: ${report.passed} of ${report.passed + report.failed}`);

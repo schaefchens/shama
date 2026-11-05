@@ -1,0 +1,62 @@
+{
+  "fa-rizeh": {
+    "language": "fa",
+    "family": "nemo_ctc",
+    "license": "Apache-2.0",
+    "credit": "Shenava Rizeh by Reza2kn on Hugging Face, Apache-2.0",
+    "source": "https://huggingface.co/Reza2kn/Shenava-Rizeh-v1.0-sherpa-onnx/resolve/57173ab4b3f6a646e1664e02f8bbec5a9386cabc/",
+    "files": {
+      "model": ["model.onnx", 116700660, "ec66d191f1eee10a1cc4b58ce5d2d328e160193975e118139e4600102550255b"],
+      "tokens": ["tokens.txt", 12236, "8e192963f6e666dfa5721e5cbd4710bc1ef592460a45f08cefc94b2db16a6954"]
+    }
+  },
+  "tr-seda": {
+    "language": "tr",
+    "family": "online_transducer",
+    "license": "Apache-2.0",
+    "credit": "seda by atasoglu on Hugging Face, Apache-2.0",
+    "source": "https://huggingface.co/atasoglu/seda-v0.1/resolve/5cbbda1b34bde5e3004e79b137dc3871587ea282/",
+    "files": {
+      "encoder": ["encoder.int8.onnx", 70487305, "2596861911cec5ca1de31adc12a7fc983d05395434f92239f4e007eeae3a5dcc"],
+      "decoder": ["decoder.onnx", 2093081, "dc28b7ae3f5e67c0daa2d51886dae2ac8287a25333f46a363f3684b3cd1220c9"],
+      "joiner": ["joiner.int8.onnx", 259417, "b4d1cff7c410d14c85c143885954be09a6a4a076cd35d22aeba58655665582bb"],
+      "tokens": ["tokens.txt", 5203, "f6e134fa357558d0c4ab56fbe380323c30e3d50a13fe402a68328d5a13c2236b"]
+    }
+  },
+  "de-fastconformer": {
+    "language": "de",
+    "family": "nemo_transducer",
+    "license": "CC-BY-4.0",
+    "credit": "NVIDIA NeMo stt_de_fastconformer_hybrid_large_pc, CC BY 4.0, exported by k2-fsa",
+    "archive": [
+      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-transducer-stt_de_fastconformer_hybrid_large_pc-int8.tar.bz2",
+      108124747,
+      "73b3cce9f94a19fc04bc54b55abd576b622e3925a84ddd554a95e5984bc11677"
+    ],
+    "files": { "encoder": "encoder.int8.onnx", "decoder": "decoder.int8.onnx", "joiner": "joiner.int8.onnx", "tokens": "tokens.txt" }
+  },
+  "en-parakeet": {
+    "language": "en",
+    "family": "nemo_ctc",
+    "license": "CC-BY-4.0",
+    "credit": "NVIDIA NeMo parakeet-tdt_ctc-110m, CC BY 4.0, exported by k2-fsa",
+    "archive": [
+      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2",
+      104337827,
+      "17f945007b52ccd8b7200ffc7c5652e9e8e961dfdf479cefcabd06cf5703630b"
+    ],
+    "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" }
+  },
+  "en-moonshine-tiny": {
+    "language": "en",
+    "family": "moonshine",
+    "license": "MIT",
+    "credit": "Moonshine tiny by Useful Sensors, MIT, exported by k2-fsa",
+    "archive": [
+      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27.tar.bz2",
+      29858559,
+      "9ec31b342d8fa3240c3b81b8f82e1cf7e3ac467c93ca5a999b741d5887164f8d"
+    ],
+    "files": { "encoder": "encoder_model.ort", "merged_decoder": "decoder_model_merged.ort", "tokens": "tokens.txt" }
+  }
+}

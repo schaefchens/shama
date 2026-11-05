@@ -17,6 +17,8 @@
     "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "move", "args": { "step": "next" } }] }] },
   { "name": "tr-os", "language": "tr", "recognizer": "os", "contexts": ["reading"], "utterances": ["sonraki bölüm"],
     "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "move", "args": { "step": "next" } }] }] },
+  { "name": "tr-embedded", "language": "tr", "recognizer": "embedded", "contexts": ["reading"], "utterances": ["sonraki bölüm"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "move", "args": { "step": "next" } }] }] },
   { "name": "en-nothing", "language": "en", "utterances": [],
     "expect": [{ "kind": "unresolved", "reason": "nothingHeard" }] },
   { "name": "en-ai", "language": "en", "utterances": ["the one about the white whale"],

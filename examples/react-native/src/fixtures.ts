@@ -9,6 +9,7 @@ export const fixtures: Record<string, number> = {
   'en-os.wav': require('../assets/fixtures/en-os.wav'),
   'de-os.wav': require('../assets/fixtures/de-os.wav'),
   'tr-os.wav': require('../assets/fixtures/tr-os.wav'),
+  'tr-embedded.wav': require('../assets/fixtures/tr-embedded.wav'),
   'en-nothing.wav': require('../assets/fixtures/en-nothing.wav'),
   'en-ai.wav': require('../assets/fixtures/en-ai.wav'),
   'en-live.wav': require('../assets/fixtures/en-live.wav'),

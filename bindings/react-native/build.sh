@@ -1,7 +1,8 @@
 #!/bin/sh
 # Builds Shama's core for iOS – a dynamic framework, so it sits next to other Rust libraries in
 # an app – and for Android, and generates its Swift and Kotlin bindings, which only the native
-# module calls. Needs rustup with the iOS and Android targets, cargo-ndk, Xcode and ANDROID_HOME.
+# module calls; and puts sherpa-onnx's libraries beside it, the embedded recognizer's runtime.
+# Needs rustup with the iOS and Android targets, cargo-ndk, Xcode and ANDROID_HOME.
 #
 #   sh build.sh [ios] [android]
 set -e
@@ -14,6 +15,8 @@ name=shama_ffi
 # CocoaPods links a framework by its xcframework's name.
 framework_name=ShamaCore
 platforms=${*:-ios android}
+archives=.cache/sherpa-archives
+sh engines/sherpa/fetch.sh macos $platforms
 
 cargo build -q -p shama-ffi
 library=target/debug/lib$name.dylib
@@ -58,10 +61,16 @@ PLIST
     frameworks="$frameworks -framework $framework"
   done
   xcodebuild -create-xcframework $frameworks -output "$here/ios/$framework_name.xcframework" > /dev/null
-  echo "iOS: $here/ios/ShamaCore.xcframework"
+  rm -rf "$here/ios/SherpaOnnxC.xcframework"
+  unzip -q $archives/sherpa-onnx-v2.0.1-ios-shared-onnxruntime-static.xcframework.zip 'SherpaOnnxC.xcframework/*' -d "$here/ios"
+  echo "iOS: $here/ios/ShamaCore.xcframework, SherpaOnnxC.xcframework"
 esac
 
 case " $platforms " in *" android "*)
   cargo ndk -t arm64-v8a -t x86_64 -P 24 -o "$here/android/src/main/jniLibs" build -q -p shama-ffi --release
+  for abi in arm64-v8a x86_64; do
+    tar xjf $archives/sherpa-onnx-v2.0.1-android.tar.bz2 -C "$here/android/src/main" \
+      ./jniLibs/$abi/libsherpa-onnx-c-api.so ./jniLibs/$abi/libonnxruntime.so
+  done
   echo "Android: $here/android/src/main/jniLibs"
 esac

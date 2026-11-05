@@ -12,9 +12,9 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  # The core as a dynamic framework, which build.sh makes; generated/ holds its Swift bindings and
-  # C header.
-  s.vendored_frameworks = 'ShamaCore.xcframework'
+  # The core as a dynamic framework, which build.sh makes, and sherpa-onnx's, which it fetches;
+  # generated/ holds the core's Swift bindings and C header.
+  s.vendored_frameworks = 'ShamaCore.xcframework', 'SherpaOnnxC.xcframework'
   # The system's language model exists from iOS 26 on.
   s.weak_frameworks = 'FoundationModels'
   s.frameworks = 'AVFAudio', 'Speech', 'Network'
@@ -24,4 +24,6 @@ Pod::Spec.new do |s|
   }
 
   s.source_files = '**/*.{h,swift}'
+  # The frameworks bring their own headers.
+  s.exclude_files = '*.xcframework/**/*'
 end

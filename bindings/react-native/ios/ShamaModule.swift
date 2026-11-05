@@ -15,6 +15,8 @@ public class ShamaModule: Module {
   private var capture: Capture?
   private var held = false
   private var background: NSObjectProtocol?
+  /// The languages the app's embedded models hear.
+  private var embedded = Set<String>()
 
   public func definition() -> ModuleDefinition {
     Name("Shama")
@@ -40,14 +42,22 @@ public class ShamaModule: Module {
       if let background = self.background { NotificationCenter.default.removeObserver(background) }
     }
 
-    AsyncFunction("configure") { (_: [String: String]) -> [[String: Any]] in
-      ["en", "de", "tr", "ar", "fa"].map { language in
+    // The app's embedded models: a folder per language.
+    AsyncFunction("configure") { (folders: [String: String]) -> [[String: Any]] in
+      var models: [String: String] = [:]
+      for (language, folder) in folders {
+        models[language] = folder.hasPrefix("file://") ? (URL(string: folder)?.path ?? folder) : folder
+      }
+      let json = String(decoding: try JSONSerialization.data(withJSONObject: models), as: UTF8.self)
+      let embedded = Set(try self.queue.sync { try self.core.setModels(json: json) })
+      self.queue.sync { self.embedded = embedded }
+      return ["en", "de", "tr", "ar", "fa"].map { language in
         let os = AppleRecognizer.support(language)
         return [
           "language": language,
-          "recognizer": os == "ready" ? "os" : "none",
+          "recognizer": os == "ready" ? "os" : embedded.contains(language) ? "embedded" : "none",
           "os": os,
-          "embedded": "missing",
+          "embedded": embedded.contains(language) ? "installed" : "missing",
           "deviceAi": DeviceModel.available(language),
         ]
       }
@@ -163,7 +173,8 @@ public class ShamaModule: Module {
     }
     if let file = options.file {
       let path = file.hasPrefix("file://") ? (URL(string: file)?.path ?? file) : file
-      // A recording is heard by the fixture recognizer – or by the system's, when asked for.
+      // A recording is heard by the fixture recognizer – or by the system's or the embedded one,
+      // when asked for.
       let recognizer: PlatformRecognizer? = options.recognizer == "os" ? try osRecognizer(options.language) : nil
       queue.async {
         do {
@@ -174,7 +185,13 @@ public class ShamaModule: Module {
       }
       return
     }
-    let recognizer = try osRecognizer(options.language)
+    // The system's recognizer where it hears the language on the device, else the app's model.
+    let choice = options.recognizer ?? "auto"
+    let embedded = queue.sync { self.embedded }
+    let useEmbedded = choice == "embedded"
+      || (choice == "auto" && embedded.contains(options.language) && AppleRecognizer.support(options.language) != "ready")
+    let recognizer: PlatformRecognizer? = useEmbedded ? nil : try osRecognizer(options.language)
+    let listenJson = useEmbedded ? try withRecognizer(json, "embedded") : json
     let live = options.mode == "continuous"
     let capture = Capture(live: live && options.echoCancellation == true) { [weak self] samples in
       self?.queue.async {
@@ -189,7 +206,7 @@ public class ShamaModule: Module {
     let rate = try capture.prepare()
     try queue.sync {
       held = false
-      try core.listen(options: json, rate: UInt32(rate.rounded()), recognizer: recognizer)
+      try core.listen(options: listenJson, rate: UInt32(rate.rounded()), recognizer: recognizer)
     }
     do {
       try capture.start()
@@ -201,6 +218,13 @@ public class ShamaModule: Module {
     if live && options.echoCancellation == true {
       emit(["event": "echoCancellation", "available": capture.echoCancelled])
     }
+  }
+
+  /// The listen options with the recognizer chosen.
+  private func withRecognizer(_ json: String, _ recognizer: String) throws -> String {
+    var options = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any] ?? [:]
+    options["recognizer"] = recognizer
+    return String(decoding: try JSONSerialization.data(withJSONObject: options), as: UTF8.self)
   }
 
   private func osRecognizer(_ language: String) throws -> AppleRecognizer {

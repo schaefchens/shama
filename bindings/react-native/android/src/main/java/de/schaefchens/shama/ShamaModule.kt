@@ -29,6 +29,8 @@ class ShamaModule : Module() {
   private val speaker by lazy { Speaker(context) }
   private var capture: Capture? = null
   @Volatile private var held = false
+  /** The languages the app's embedded models hear. */
+  @Volatile private var embedded = emptySet<String>()
 
   private val context: Context
     get() = appContext.reactContext ?: throw IllegalStateException("no React context")
@@ -52,15 +54,23 @@ class ShamaModule : Module() {
       executor.shutdown()
     }
 
-    AsyncFunction("configure") { _: Map<String, String> ->
+    // The app's embedded models: a folder per language.
+    AsyncFunction("configure") { folders: Map<String, String> ->
+      val models = JSONObject()
+      folders.forEach { (language, folder) -> models.put(language, folder.removePrefix("file://")) }
+      embedded = onQueue { core.setModels(models.toString()) }.toSet()
       val deviceAi = DeviceModel.available()
       listOf("en", "de", "tr", "ar", "fa").map { language ->
         val os = AndroidRecognizer.support(context, language)
         mapOf(
           "language" to language,
-          "recognizer" to if (os == "ready") "os" else "none",
+          "recognizer" to when {
+            os == "ready" -> "os"
+            language in embedded -> "embedded"
+            else -> "none"
+          },
           "os" to os,
-          "embedded" to "missing",
+          "embedded" to if (language in embedded) "installed" else "missing",
           "deviceAi" to deviceAi,
         )
       }
@@ -130,6 +140,7 @@ class ShamaModule : Module() {
   private fun listen(json: String) {
     val options = JSONObject(json)
     val language = options.getString("language")
+    val choice = options.optString("recognizer").ifEmpty { "auto" }
     stopCapture()
     if (options.has("text")) {
       val text = options.getString("text")
@@ -145,8 +156,9 @@ class ShamaModule : Module() {
     val file = options.optString("file").takeIf { it.isNotEmpty() }
     if (file != null) {
       val path = file.removePrefix("file://")
-      // A recording is heard by the fixture recognizer – or by the system's, when asked for.
-      val recognizer = if (options.optString("recognizer") == "os") osRecognizer(language) else null
+      // A recording is heard by the fixture recognizer – or by the system's or the embedded one,
+      // when asked for.
+      val recognizer = if (choice == "os") osRecognizer(language) else null
       executor.execute {
         try {
           emit(core.listenFile(json, path, recognizer))
@@ -156,7 +168,11 @@ class ShamaModule : Module() {
       }
       return
     }
-    val recognizer = osRecognizer(language)
+    // The system's recognizer where it hears the language on the device, else the app's model.
+    val useEmbedded = choice == "embedded" ||
+      (choice == "auto" && language in embedded && AndroidRecognizer.support(context, language) != "ready")
+    val recognizer = if (useEmbedded) null else osRecognizer(language)
+    val listenJson = if (useEmbedded) options.put("recognizer", "embedded").toString() else json
     val live = options.optString("mode") == "continuous" && options.optBoolean("echoCancellation")
     val capture = Capture(context, live) { pcm ->
       executor.execute { if (!held) emit(core.pushPcm16(pcm)) }
@@ -167,7 +183,7 @@ class ShamaModule : Module() {
     }
     onQueue {
       held = false
-      core.listen(json, Capture.RATE_UNSIGNED, recognizer)
+      core.listen(listenJson, Capture.RATE_UNSIGNED, recognizer)
     }
     capture.start()
     this.capture = capture
