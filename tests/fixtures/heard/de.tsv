@@ -1,0 +1,29 @@
+# stage	contexts	app speaking	heard	expected
+1	-	n	Lies Moby Dick Kapitel drei	open book=moby; chapter=3
+1	-	n	lies das dritte Kapitel von Faust	open book=faust; chapter=3
+1	-	n	öffne Tausendundeine Nacht einundzwanzig	open book=nights; chapter=21
+1	-	n	Tausendundeine Nacht Kapitel hundertneunzehn	open book=nights; chapter=119
+1	-	n	spiele Don Quijote	open book=quixote
+1	-	n	lies Diwan des Hafis Kapitel 5	open book=hafez; chapter=5
+1	-	n	Mathnawi 2	open book=masnavi; chapter=2
+1	reading	n	nächstes Kapitel	move step=next
+1	reading	n	voriges Kapitel	move step=previous
+1	library	n	nächstes	select
+1	-	n	schneller	speed change=faster
+1	-	n	lies langsamer	speed change=slower
+1	-	n	Pause	pause
+1	-	n	mach weiter	resume
+1	-	n	Stopp!	stop
+1	-	n	Wo bin ich?	whereAmI
+1	-	n	suche nach dem weißen Wal	search query=dem weißen Wal
+1	-	n	lösche alle Lesezeichen	confirm deleteBookmarks
+1	-	n	Verlauf löschen	confirm clearHistory
+1	-	n	hör auf zuzuhören	stopListening
+1	-	n	lies Moby Dick Kapitel zweihundert	open book=moby; chapter=200
+2	-	n	lies Moby Dick Kapitel dreihundert	confirm open book=moby
+2	-	n	äh wo bin ich bitte	whereAmI
+2	-	n	langsammer	speed change=slower
+-	-	n	das Wetter ist schön heute	none
+1	reading	y	stopp	stop
+1	reading	y	nächstes Kapitel	move step=next
+-	reading	y	lies Faust	none

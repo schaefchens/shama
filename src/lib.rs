@@ -4,16 +4,22 @@
 mod assistant;
 mod builtin;
 mod contract;
+pub mod engine;
 mod language;
+pub mod listen;
+mod listener;
 mod matcher;
 pub mod normalize;
 pub mod numbers;
 pub mod pattern;
+pub mod resample;
 mod vocabulary;
+pub mod wav;
 
 pub use assistant::{AiReply, AiRequest, Checked, NOT_ADDRESSED, ToolSpec};
 pub use builtin::Builtin;
 pub use contract::*;
 pub use language::Language;
+pub use listener::{Listener, ListenerEvent, ListenerOptions};
 pub use matcher::SettleOptions;
 pub use vocabulary::{Arg, ArgKind, Compiled, Localized, Phrase, Problem, Tool, Value, Vocabulary, VocabularyError};

@@ -1,0 +1,23 @@
+# stage	contexts	app speaking	heard	expected
+1	-	n	اقرأ موبي ديك الفصل الثالث	open book=moby; chapter=3
+1	-	n	افتح فاوست	open book=faust
+1	-	n	شغل ألف ليلة وليلة الفصل ٢١	open book=nights; chapter=21
+1	-	n	اِقْرَأْ الفَصْلَ الخَامِسَ مِنْ دون كيخوته	open book=quixote; chapter=5
+1	-	n	اقرأ المثنوي الفصل مائة وتسعة عشر	open book=masnavi; chapter=119
+1	reading	n	الفصل التالي	move step=next
+1	reading	n	السابق	move step=previous
+1	library	n	التالي	select
+1	-	n	أسرع	speed change=faster
+1	-	n	أبطأ	speed change=slower
+1	-	n	انتظر	pause
+1	-	n	تابع	resume
+1	-	n	توقف	stop
+1	-	n	أين أنا؟	whereAmI
+1	-	n	ابحث عن الحوت الأبيض	search query=الحوت الأبيض
+1	-	n	احذف كل العلامات	confirm deleteBookmarks
+1	-	n	امسح السجل	confirm clearHistory
+1	-	n	توقف عن الاستماع	stopListening
+2	-	n	من فضلك أين أنا	whereAmI
+-	-	n	الجو جميل اليوم	none
+1	reading	y	توقف	stop
+-	reading	y	اقرأ فاوست	none

@@ -1,0 +1,35 @@
+# stage	contexts	app speaking	heard	expected
+1	-	n	read Moby Dick chapter three	open book=moby; chapter=3
+1	-	n	open Faust	open book=faust
+1	-	n	play the third chapter of Don Quixote	open book=quixote; chapter=3
+1	-	n	One Thousand and One Nights twenty one	open book=nights; chapter=21
+1	-	n	read the Masnavi 12	open book=masnavi; chapter=12
+1	-	n	Hafez chapter one hundred and nineteen	open book=hafez; chapter=119
+1	reading	n	next chapter	move step=next
+1	reading	n	previous	move step=previous
+1	library	n	next	select
+1	library,reading	n	next	select
+1	reading,library	n	next	move step=next
+1	-	n	faster	speed change=faster
+1	-	n	read slower	speed change=slower
+1	-	n	pause	pause
+1	-	n	go on	resume
+1	-	n	stop	stop
+1	-	n	Where am I?	whereAmI
+1	-	n	search for the white whale	search query=the white whale
+1	-	n	find Ishmael	search query=Ishmael
+1	-	n	delete all my bookmarks	confirm deleteBookmarks
+1	-	n	clear the history	confirm clearHistory
+1	-	n	stop listening	stopListening
+2	-	n	uh where am I please	whereAmI
+2	-	n	slowr	speed change=slower
+2	-	n	I would like to read Moby Dick chapter 3 now	confirm open book=moby; chapter=3
+2	-	n	stop the car	confirm stop
+-	-	n	the weather is nice today	none
+-	-	n	nothing to see here	none
+-	reading	n	read the Bible	none
+-	reading	y	read Moby Dick	none
+1	reading	y	stop	stop
+1	reading	y	next chapter	move step=next
+-	reading	y	stopp	none
+-	reading	y	and then he said stop	none

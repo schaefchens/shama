@@ -1,0 +1,114 @@
+{
+  "tools": [
+    {
+      "id": "open",
+      "description": "Opens a book, at a chapter if one is said",
+      "args": {
+        "book": { "type": "value", "of": "books", "required": true },
+        "chapter": { "type": "number", "min": 1, "max": 200 }
+      },
+      "phrases": [
+        {
+          "say": {
+            "en": ["[read|open|play] {book} [[chapter] {chapter}]", "[read|open|play] [the] {chapter} chapter of {book}"],
+            "de": ["[lies|öffne|spiele] {book} [[kapitel] {chapter}]", "[lies|öffne|spiele] [das] {chapter} kapitel [von|aus] {book}"],
+            "tr": ["{book} [{chapter} bölüm] [oku|aç|çal]", "{book} {chapter} [oku|aç|çal]", "{book} bölüm {chapter} [oku|aç|çal]", "(oku|aç|çal) {book} [bölüm {chapter}]"],
+            "ar": ["[اقرأ|افتح|شغل] {book} [[الفصل] {chapter}]", "[اقرأ|افتح|شغل] الفصل {chapter} من {book}"],
+            "fa": ["(بخوان|باز کن|پخش کن) {book} [فصل {chapter}]", "{book} [فصل {chapter}] [را] (بخوان|باز کن|پخش کن)", "فصل {chapter} [از] {book} [را] [بخوان|باز کن|پخش کن]"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "description": "Goes to the next or the previous chapter",
+      "args": { "step": { "type": "value", "of": "steps", "required": true } },
+      "contexts": ["reading"],
+      "interrupt": true,
+      "phrases": [
+        {
+          "say": { "en": ["next [chapter]"], "de": ["nächstes [kapitel]"], "tr": ["sonraki [bölüm]"], "ar": ["[الفصل] التالي"], "fa": ["(فصل بعد|فصل بعدی|بعدی)"] },
+          "args": { "step": "next" }
+        },
+        {
+          "say": { "en": ["previous [chapter]"], "de": ["(vorheriges|voriges) [kapitel]"], "tr": ["önceki [bölüm]"], "ar": ["[الفصل] السابق"], "fa": ["(فصل قبل|فصل قبلی|قبلی)"] },
+          "args": { "step": "previous" }
+        }
+      ]
+    },
+    {
+      "id": "select",
+      "description": "Selects the next book in the library",
+      "contexts": ["library"],
+      "phrases": [{ "say": { "en": ["next"], "de": ["nächstes"], "tr": ["sonraki"], "ar": ["التالي"], "fa": ["بعدی"] } }]
+    },
+    {
+      "id": "speed",
+      "description": "Reads faster or slower",
+      "args": { "change": { "type": "value", "of": "speeds", "required": true } },
+      "phrases": [
+        {
+          "say": { "en": ["[read] faster"], "de": ["[lies] schneller"], "tr": ["(daha hızlı|hızlandır)"], "ar": ["أسرع"], "fa": ["(تندتر|سریع‌تر)"] },
+          "args": { "change": "faster" }
+        },
+        {
+          "say": { "en": ["[read] slower"], "de": ["[lies] langsamer"], "tr": ["(daha yavaş|yavaşlat)"], "ar": ["أبطأ"], "fa": ["(آهسته‌تر|آرام‌تر)"] },
+          "args": { "change": "slower" }
+        }
+      ]
+    },
+    {
+      "id": "pause",
+      "description": "Pauses the reading",
+      "interrupt": true,
+      "phrases": [{ "say": { "en": ["(pause|wait)"], "de": ["(pause|warte)"], "tr": ["(duraklat|bekle)"], "ar": ["(انتظر|توقف مؤقتا)"], "fa": ["(صبر کن|مکث کن)"] } }]
+    },
+    {
+      "id": "resume",
+      "description": "Reads on",
+      "phrases": [{ "say": { "en": ["(continue|resume|go on)"], "de": ["(weiter|fortsetzen|mach weiter|weiterlesen)"], "tr": ["devam [et]"], "ar": ["(تابع|استمر|أكمل)"], "fa": ["ادامه [بده]"] } }]
+    },
+    {
+      "id": "stop",
+      "description": "Stops the reading",
+      "interrupt": true,
+      "phrases": [{ "say": { "en": ["stop"], "de": ["(stopp|halt|stop)"], "tr": ["(dur|durdur)"], "ar": ["(توقف|قف)"], "fa": ["(توقف|بس کن|بسه)"] } }]
+    },
+    {
+      "id": "whereAmI",
+      "description": "Says which book and chapter are open",
+      "phrases": [{ "say": { "en": ["where am i"], "de": ["wo bin ich"], "tr": ["(neredeyim|nerede kaldım)"], "ar": ["أين أنا"], "fa": ["(کجا هستم|کجام)"] } }]
+    },
+    {
+      "id": "search",
+      "description": "Searches the open book for words",
+      "args": { "query": { "type": "text", "required": true } },
+      "phrases": [{ "say": { "en": ["(search|look) for {query}", "find {query}"], "de": ["suche [nach] {query}", "finde {query}"], "tr": ["{query} ara", "ara {query}"], "ar": ["ابحث عن {query}"], "fa": ["{query} را پیدا کن", "دنبال {query} بگرد"] } }]
+    },
+    {
+      "id": "deleteBookmarks",
+      "description": "Deletes all bookmarks",
+      "confirm": true,
+      "phrases": [{ "say": { "en": ["delete [all] [my] bookmarks"], "de": ["lösche [alle] [meine] lesezeichen", "lesezeichen löschen"], "tr": ["[tüm] yer imlerini sil"], "ar": ["احذف [كل] العلامات"], "fa": ["[همه] نشانک‌ها را پاک کن"] } }]
+    },
+    {
+      "id": "clearHistory",
+      "description": "Clears what was read when",
+      "confirm": true,
+      "ai": false,
+      "phrases": [{ "say": { "en": ["(clear|delete) [the] history"], "de": ["verlauf löschen", "lösche den verlauf"], "tr": ["geçmişi (temizle|sil)"], "ar": ["امسح السجل"], "fa": ["تاریخچه را پاک کن"] } }]
+    }
+  ],
+  "values": {
+    "books": [
+      { "id": "quixote", "say": { "en": ["Don Quixote"], "de": ["Don Quijote", "Don Quixote"], "tr": ["Don Kişot"], "ar": ["دون كيخوته", "دون كيشوت"], "fa": ["دن کیشوت", "دون کیشوت"] } },
+      { "id": "nights", "say": { "en": ["One Thousand and One Nights", "Arabian Nights"], "de": ["Tausendundeine Nacht"], "tr": ["Binbir Gece", "Binbir Gece Masalları"], "ar": ["ألف ليلة وليلة"], "fa": ["هزار و یک شب"] } },
+      { "id": "moby", "say": { "en": ["Moby Dick"], "de": ["Moby Dick"], "tr": ["Moby Dick"], "ar": ["موبي ديك"], "fa": ["موبی دیک"] } },
+      { "id": "faust", "say": { "en": ["Faust"], "de": ["Faust"], "tr": ["Faust"], "ar": ["فاوست"], "fa": ["فاوست"] } },
+      { "id": "masnavi", "say": { "en": ["Masnavi", "the Masnavi"], "de": ["Masnavi", "Mathnawi"], "tr": ["Mesnevi"], "ar": ["المثنوي", "مثنوي"], "fa": ["مثنوی", "مثنوی معنوی"] } },
+      { "id": "hafez", "say": { "en": ["Divan of Hafez", "Hafez"], "de": ["Diwan des Hafis", "Hafis"], "tr": ["Hafız Divanı", "Hafız"], "ar": ["ديوان حافظ", "حافظ"], "fa": ["دیوان حافظ", "حافظ"] } }
+    ],
+    "steps": [{ "id": "next" }, { "id": "previous" }],
+    "speeds": [{ "id": "faster" }, { "id": "slower" }]
+  }
+}
