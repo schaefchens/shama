@@ -1,0 +1,18 @@
+[package]
+name = "shama-ffi"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Shama for Swift and Kotlin, through UniFFI"
+publish = false
+
+[lib]
+name = "shama_ffi"
+# A dynamic library, so it sits next to other Rust libraries in an app, each with its own runtime.
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+shama = { path = "../.." }
+serde_json = "1"
+thiserror = "2"
+uniffi = "0.31"

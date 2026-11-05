@@ -1,0 +1,10 @@
+[package]
+name = "uniffi-bindgen"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Generates the Swift and Kotlin bindings. A crate of its own, so the generator isn't compiled
+# for every phone target.
+[dependencies]
+uniffi = { version = "0.31", features = ["cli"] }

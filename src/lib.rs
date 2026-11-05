@@ -5,6 +5,7 @@ mod assistant;
 mod builtin;
 mod contract;
 pub mod engine;
+pub mod host;
 mod language;
 pub mod listen;
 mod listener;

@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 shama = { path = "../.." }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 js-sys = "0.3"
 # At the version of the wasm-bindgen CLI that bindings/web/build.sh runs.

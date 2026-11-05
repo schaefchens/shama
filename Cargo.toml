@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "bindings/wasm"]
+members = [".", "bindings/ffi", "bindings/uniffi-bindgen", "bindings/wasm"]
 resolver = "3"
 
 [package]
