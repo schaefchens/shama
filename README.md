@@ -30,9 +30,9 @@ Shama was written with an AI model – Anthropic's Claude, through Claude Code �
 
 Shama fits apps whose commands people can name – readers, audiobook and media players, tools with a known set of actions – and that care where speech goes. What it costs:
 
-- **Recognition quality is the device's:** biasing helps with names, but a system recognizer is no grammar; an embedded one costs tens of megabytes per language (see [engines.md](docs/engines.md)).
+- **Recognition quality is the device's:** biasing helps with names, but a system recognizer is no grammar. The embedded recognizer adds about 26 MB of runtime to an app, and its models 38–375 MB per language (see [engines.md](docs/engines.md)).
 - **A vocabulary to write:** phrases in every language you serve – best reviewed by native speakers.
-- **Maturity:** a preview; tested on simulators, emulators and browsers, not yet on phones.
+- **Maturity:** a preview; tested on simulators, emulators and browsers, not yet on phones. In the browser it hears nothing yet: its embedded recognizer needs a WebAssembly build of sherpa-onnx that isn't made.
 
 | Alternative | What it does well | What it leaves out, compared with Shama |
 | --- | --- | --- |
@@ -47,7 +47,7 @@ Not on npm yet: build from source. Rust through rustup with the iOS, Android and
 
 ```sh
 npm install                              # the workspace: packages and examples
-sh bindings/react-native/build.sh        # the core for iOS and Android, and its Swift and Kotlin bindings
+sh bindings/react-native/build.sh        # the core for iOS and Android, its bindings, sherpa-onnx's libraries
 sh bindings/web/build.sh                 # the core as WASM
 ```
 
@@ -81,12 +81,14 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 - **Context and state:** `shama.setContext({ contexts: ['reading'], state: { book: 'moby', chapter: 3 } })` – or `useShamaContext` per screen.
 - **AI:** `shama.setAi({ brief, device: true, external: anthropic({ client, model: 'claude-opus-5-5' }) })` and `shama.setMode('online')`.
 - **Your own stage 2:** `shama.addResolver(({ heard }) => search(heard[0].text))`.
+- **Embedded models:** `node tools/models.mjs <folder> fa-rizeh tr-seda` fetches them, checked, into a folder per language; bundle it or download the same files, and pass the folders to `shama.languages({ models: { fa: …, tr: … } })`. Where the system has no recognizer for a language, Shama uses the model; `recognizer: 'os' | 'embedded'` chooses. A model's `shama-model.json` names its license and the credit it asks for.
 
 [examples/react-native](examples/react-native) and [examples/web](examples/web) are a whole app each: an audiobook reader's voice control in five languages, with a self-test.
 
 ## How it works
 
 - **The core** (Rust, `src/`) holds the vocabulary, normalization, numbers, the matcher, the AI's tool schemas and checks, the resampler and the endpointer, and settles every utterance on the device. Native code reaches it through UniFFI (`bindings/ffi`), the web's worker through wasm-bindgen (`bindings/wasm`).
+- **The embedded recognizer** (`engines/sherpa`) runs a model with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) inside the app, one loaded at a time; its libraries come from sherpa-onnx's releases, checked against their published digests.
 - **The platforms** bring the microphone – AVAudioEngine, AudioRecord, an AudioWorklet – the system's recognizer and language model, and a voice. Audio goes from the microphone to the core without passing through JavaScript; what was heard stays there until a stage in JavaScript needs the words.
 - **The pipeline** (TypeScript, `bindings/js`) runs what follows the device's stages: the app's resolvers, the AI, the questions, LIVE.
 
@@ -104,6 +106,7 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 | Path | What |
 | --- | --- |
 | `src/` | The core |
+| `engines/sherpa` | The embedded recognizer, and the catalog of its models |
 | `bindings/ffi`, `bindings/uniffi-bindgen` | The core for Swift and Kotlin |
 | `bindings/wasm` | The core for the web |
 | `bindings/js` | `@schaefchens/shama`: the pipeline, the AI providers, the self-test |
@@ -112,7 +115,7 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 | `bindings/react` | `@schaefchens/shama-react`: the hooks |
 | `examples/react-native`, `examples/web` | The examples |
 | `tests/` | The core's tests and fixtures: the examples' vocabulary, rows of what recognizers might hear, the self-test's cases |
-| `tools/` | The fixture recordings, the measuring tools |
+| `tools/` | The fixture recordings, models, the device test, the measuring tools |
 | `docs/` | Decisions and measurements |
 
 ## What the tests show
@@ -121,7 +124,9 @@ November 2026:
 
 - **The core:** numbers 0–999 read back from every spelling in five languages; 131 rows of what recognizers might hear – near misses and speech not meant for the app among them – settled as they must be; the endpointer on synthesized speech, clicks and silence; the resampler keeps speech level and folds nothing back above 8 kHz (below −60 dB); recordings through the whole pipeline, push-to-talk and LIVE.
 - **The pipeline:** stage order, no AI before the device's stages; external AI blocked offline and in LIVE unless allowed; a confirmation never left to an AI; slow AIs given up on; LIVE's interrupts, pauses, quiet time and "stop listening"; both AI providers' requests and answers.
-- **The self-test** – recordings in five languages, nothing heard, a LIVE conversation, a turn settled by a fake AI – passes through the core as WASM in Node, and in Chromium, Firefox and WebKit.
+- **The embedded models:** each catalogued model hears the measuring corpus's fixed commands – 8 of 9 for Persian, Turkish, German and English, 5 of 9 for Arabic – and through the core settles "pause" as the tool.
+- **The self-test** – recordings in five languages, nothing heard, a LIVE conversation, a turn settled by a fake AI, spoken commands heard by the system's recognizer and by an embedded model – passes through the core as WASM in Node, and in Chromium, Firefox and WebKit, where it skips the spoken commands. On the iOS 26.3 simulator Apple's recognizer heard English (the simulator has no other language on the device) and seda Turkish; on the Android 16 emulator Google's recognizer heard English, German and Turkish, and seda Turkish.
+- **Measured** ([engines.md](docs/engines.md)): recognizers on synthetic and real voices in five languages – fixed commands are heard well, names and numbers much less; no near miss or unrelated sentence was taken for a command.
 
 ## License
 
