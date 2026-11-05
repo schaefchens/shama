@@ -1,0 +1,30 @@
+{
+  "name": "shama-example-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fixtures": "node ../../tools/fixtures.mjs public/fixtures",
+    "predev": "npm run fixtures",
+    "dev": "vite",
+    "prebuild": "npm run fixtures",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@schaefchens/shama": "*",
+    "@schaefchens/shama-react": "*",
+    "@schaefchens/shama-web": "*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "~19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.5"
+  }
+}

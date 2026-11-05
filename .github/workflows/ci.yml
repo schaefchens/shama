@@ -1,6 +1,6 @@
 # Shama's tests on every push: the Rust workspace – formatting, clippy, the tests – the TypeScript
 # pipeline – its types and tests – and the web build: the core as WASM, the self-test through it in
-# Node. Actions are pinned by commit.
+# Node and in Chromium, Firefox and – on macOS – WebKit. Actions are pinned by commit.
 name: CI
 
 on:
@@ -54,3 +54,23 @@ jobs:
       - run: sh bindings/web/build.sh
       - run: npm run typecheck -w bindings/web
       - run: npm test -w bindings/web
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run e2e -w examples/web -- --project=chromium --project=firefox
+
+  web-webkit:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master, 2026-10-16
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: wasm-bindgen-cli at Cargo.lock's version
+        run: cargo install wasm-bindgen-cli --locked --version "$(cargo metadata --format-version 1 --locked | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')"
+      - run: npm ci
+      - run: sh bindings/web/build.sh
+      - run: npx playwright install webkit
+      - run: npm run e2e -w examples/web -- --project=webkit

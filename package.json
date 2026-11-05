@@ -4,7 +4,8 @@
   "workspaces": [
     "bindings/js",
     "bindings/web",
-    "bindings/react"
+    "bindings/react",
+    "examples/web"
   ],
   "scripts": {
     "build": "npm run build -w bindings/js -w bindings/web -w bindings/react",

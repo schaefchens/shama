@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 44rem;
+  padding: 1rem;
+}
+
+.hint,
+.heard {
+  opacity: 0.75;
+}
+
+.controls,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block: 1rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.4rem 0.8rem;
+}
+
+.talk {
+  min-width: 10rem;
+  min-height: 3rem;
+  touch-action: none;
+}
+
+.error {
+  color: #b3261e;
+}
+
+.result {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.result h2 {
+  font-size: 1rem;
+}
+
+.trail {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}

@@ -5,3 +5,8 @@ dist/
 .cache/
 # Built by bindings/web/build.sh.
 bindings/web/src/generated/
+# Made by the examples from tests/fixtures/audio.json; and what test runs leave.
+examples/*/public/fixtures/
+examples/*/assets/fixtures/
+examples/web/test-results/
+examples/web/playwright-report/
