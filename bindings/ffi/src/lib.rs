@@ -32,9 +32,9 @@ pub enum RecognizerError {
 pub trait PlatformRecognizer: Send + Sync {
     fn name(&self) -> String;
 
-    /// The readings of 16 kHz mono audio as JSON: `[{ "text": …, "confidence": … }]`, the
-    /// likeliest first; `bias` lists phrases to favor.
-    fn recognize(&self, language: String, bias: Vec<String>, audio: Vec<f32>) -> Result<String, RecognizerError>;
+    /// The readings of an utterance – 16 kHz mono, 16-bit little-endian PCM – as JSON:
+    /// `[{ "text": …, "confidence": … }]`, the likeliest first; `bias` lists phrases to favor.
+    fn recognize(&self, language: String, bias: Vec<String>, audio: Vec<u8>) -> Result<String, RecognizerError>;
 }
 
 struct Platform(Arc<dyn PlatformRecognizer>);
@@ -52,10 +52,15 @@ impl Recognizer for Platform {
     ) -> Result<Vec<Hypothesis>, String> {
         let json = self
             .0
-            .recognize(language.code().into(), bias.to_vec(), utterance.audio().to_vec())
+            .recognize(language.code().into(), bias.to_vec(), pcm16(utterance.audio()))
             .map_err(|e| e.to_string())?;
         serde_json::from_str(&json).map_err(|e| e.to_string())
     }
+}
+
+/// Audio as 16-bit little-endian PCM.
+fn pcm16(samples: &[f32]) -> Vec<u8> {
+    samples.iter().flat_map(|sample| ((sample.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes()).collect()
 }
 
 #[derive(uniffi::Object, Default)]
@@ -106,6 +111,13 @@ impl ShamaCore {
         self.host().push(&samples)
     }
 
+    /// Takes microphone audio as 16-bit little-endian PCM – what Android's recorder gives.
+    pub fn push_pcm16(&self, pcm: Vec<u8>) -> String {
+        let samples: Vec<f32> =
+            pcm.chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect();
+        self.host().push(&samples)
+    }
+
     /// The talk button let go: what came of it as JSON.
     pub fn release(&self) -> String {
         self.host().release()
@@ -152,8 +164,8 @@ mod tests {
             "test".into()
         }
 
-        fn recognize(&self, _: String, bias: Vec<String>, audio: Vec<f32>) -> Result<String, RecognizerError> {
-            assert!(!bias.is_empty() && !audio.is_empty());
+        fn recognize(&self, _: String, bias: Vec<String>, audio: Vec<u8>) -> Result<String, RecognizerError> {
+            assert!(!bias.is_empty() && audio.len().is_multiple_of(2) && audio.iter().any(|b| *b != 0));
             Ok(format!(r#"[{{"text":"{}"}}]"#, self.0))
         }
     }
@@ -168,7 +180,7 @@ mod tests {
         core.listen(r#"{"mode":"hold","language":"en"}"#.into(), 16_000, Arc::new(Hears("read Faust"))).unwrap();
         let voice: Vec<f32> = (0..16_000).map(|i| 0.1 * (i as f32 * 0.06).sin()).collect();
         let mut events = core.push(vec![0.0; 8000]);
-        events.push_str(&core.push(voice));
+        events.push_str(&core.push_pcm16(pcm16(&voice)));
         let released: serde_json::Value = serde_json::from_str(&core.release()).unwrap();
         let settled = released.as_array().unwrap().iter().find(|e| e["event"] == "settled").expect("settled");
         assert_eq!(settled["settled"]["outcome"]["calls"][0]["args"]["book"], "faust");

@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'de.schaefchens.shama'
+version = '0.0.0'
+
+android {
+  namespace "de.schaefchens.shama"
+  defaultConfig {
+    versionCode 1
+    versionName "0.0.0"
+    consumerProguardFiles "consumer-rules.pro"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // The core's Kotlin bindings load it through JNA.
+  implementation "net.java.dev.jna:jna:5.17.0@aar"
+  // The system's language model, Gemini Nano, where a phone has it – called from API 26 on only.
+  implementation "com.google.mlkit:genai-prompt:1.0.0-beta4"
+}

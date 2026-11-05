@@ -1,0 +1,59 @@
+#!/bin/sh
+# Builds Shama's core for iOS – a dynamic framework, so it sits next to other Rust libraries in
+# an app – and for Android, and generates its Swift and Kotlin bindings, which only the native
+# module calls. Needs rustup with the iOS and Android targets, cargo-ndk, Xcode and ANDROID_HOME.
+#
+#   sh build.sh [ios] [android]
+set -e
+
+# rustup's toolchain first: a Homebrew Rust earlier in PATH has no iOS or Android targets.
+export PATH="$HOME/.cargo/bin:$PATH"
+here=$(cd "$(dirname "$0")" && pwd)
+cd "$here/../.."
+name=shama_ffi
+# CocoaPods links a framework by its xcframework's name.
+framework_name=ShamaCore
+platforms=${*:-ios android}
+
+cargo build -q -p shama-ffi
+library=target/debug/lib$name.dylib
+cargo run -q -p uniffi-bindgen -- generate --library "$library" --language swift --out-dir "$here/ios/generated"
+cargo run -q -p uniffi-bindgen -- generate --library "$library" --language kotlin --no-format --out-dir "$here/android/src/main/java"
+
+case " $platforms " in *" ios "*)
+  rm -rf target/react-native "$here/ios/ShamaCore.xcframework"
+  frameworks=""
+  for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+    IPHONEOS_DEPLOYMENT_TARGET=16.4 cargo build -q -p shama-ffi --release --target $target
+    framework=target/react-native/$target/$framework_name.framework
+    mkdir -p $framework
+    cp target/$target/release/lib$name.dylib $framework/$framework_name
+    install_name_tool -id @rpath/$framework_name.framework/$framework_name $framework/$framework_name
+    platform=$([ $target = aarch64-apple-ios ] && echo iPhoneOS || echo iPhoneSimulator)
+    cat > $framework/Info.plist <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>$framework_name</string>
+  <key>CFBundleIdentifier</key><string>de.schaefchens.shama.core</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>$framework_name</string>
+  <key>CFBundlePackageType</key><string>FMWK</string>
+  <key>CFBundleShortVersionString</key><string>0.0.0</string>
+  <key>CFBundleSupportedPlatforms</key><array><string>$platform</string></array>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>MinimumOSVersion</key><string>16.4</string>
+</dict>
+</plist>
+PLIST
+    frameworks="$frameworks -framework $framework"
+  done
+  xcodebuild -create-xcframework $frameworks -output "$here/ios/$framework_name.xcframework" > /dev/null
+  echo "iOS: $here/ios/ShamaCore.xcframework"
+esac
+
+case " $platforms " in *" android "*)
+  cargo ndk -t arm64-v8a -t x86_64 -P 24 -o "$here/android/src/main/jniLibs" build -q -p shama-ffi --release
+  echo "Android: $here/android/src/main/jniLibs"
+esac

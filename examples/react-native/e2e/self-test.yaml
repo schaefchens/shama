@@ -1,0 +1,23 @@
+# The self-test on a simulator or emulator: the fixture recordings through the device's native
+# module and core. Started by its link; it shows its result above the lines.
+appId: de.schaefchens.shama.example
+---
+# A development build may leave the system's "Open in …?" prompt up, and a permission asked for
+# earlier: away with them.
+- tapOn:
+    text: "Allow"
+    optional: true
+- repeat:
+    while:
+      visible: "Open in .*"
+    commands:
+      - tapOn: Cancel
+- openLink: shama-example://self-test
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: self-test-result
+      text: "passed: \\d+ of \\d+"
+    timeout: 90000

@@ -1,0 +1,39 @@
+{
+  "name": "@schaefchens/shama-react-native",
+  "version": "0.0.0",
+  "description": "Shama for React Native on iOS and Android, an Expo module: the microphone, the system's recognizer and language model on the device, the core in Rust",
+  "license": "Apache-2.0",
+  "author": "schaefchens",
+  "homepage": "https://github.com/schaefchens/shama",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schaefchens/shama.git",
+    "directory": "bindings/react-native"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "app.plugin.js",
+    "expo-module.config.json"
+  ],
+  "scripts": {
+    "build:native": "sh build.sh",
+    "build:ios": "sh build.sh ios",
+    "build:android": "sh build.sh android"
+  },
+  "dependencies": {
+    "@schaefchens/shama": "*"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

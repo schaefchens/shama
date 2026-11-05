@@ -360,6 +360,12 @@ export function createShama(port: Port): Shama {
     return { kind: 'unresolved', reason, trail };
   }
 
+  /** The microphone's permission, asked for when listening first needs it – not for a file. */
+  async function microphone(file: string | undefined): Promise<void> {
+    if (file) return;
+    if (!(await port.requestPermission())) throw new ShamaError('permission', 'no permission to use the microphone');
+  }
+
   async function listeningStart(): Promise<void> {
     const handlers = [...(listeners.get('listeningStart') ?? [])] as ShamaEvents['listeningStart'][];
     if (handlers.length === 0) return;
@@ -520,6 +526,7 @@ export function createShama(port: Port): Shama {
   const live: Live = {
     async start(options) {
       if (session) throw new ShamaError('busy', 'Shama is already listening');
+      await microphone(options.file);
       language = options.language;
       const current: LiveSession = {
         kind: 'live',
@@ -621,6 +628,7 @@ export function createShama(port: Port): Shama {
     requestPermission: () => port.requestPermission(),
     async start(options) {
       if (session) throw new ShamaError('busy', 'Shama is already listening');
+      await microphone(options.file);
       language = options.language;
       sync();
       await listeningStart();

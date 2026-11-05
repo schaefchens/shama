@@ -1,0 +1,30 @@
+{
+  "name": "shama-example-react-native",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "fixtures": "node ../../tools/fixtures.mjs assets/fixtures",
+    "prestart": "npm run fixtures",
+    "start": "expo start",
+    "preios": "npm run fixtures",
+    "ios": "expo run:ios",
+    "preandroid": "npm run fixtures",
+    "android": "expo run:android"
+  },
+  "dependencies": {
+    "@schaefchens/shama": "*",
+    "@schaefchens/shama-react": "*",
+    "@schaefchens/shama-react-native": "*",
+    "expo": "58.0.19",
+    "expo-asset": "58.0.18",
+    "expo-speech": "~58.0.3",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "5.10.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  }
+}

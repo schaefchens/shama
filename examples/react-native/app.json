@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Shama",
+    "slug": "shama-example",
+    "scheme": "shama-example",
+    "version": "0.0.0",
+    "orientation": "default",
+    "ios": {
+      "bundleIdentifier": "de.schaefchens.shama.example",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "de.schaefchens.shama.example"
+    },
+    "plugins": [
+      [
+        "@schaefchens/shama-react-native",
+        {
+          "microphone": "The example listens while you hold the talk button, or while LIVE is on.",
+          "speechRecognition": "What you say is recognized on this device."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}
