@@ -64,5 +64,7 @@ test('the self-test passes through the core as WASM', async () => {
   const cases = JSON.parse(readFileSync(new URL('tests/fixtures/audio.json', root), 'utf8')) as SelfTestCase[];
   const report = await selfTest(shama, { vocabulary, cases, file: (name) => new URL(name, fixtures).pathname });
   assert.equal(report.failed, 0, report.lines.join('\n'));
-  assert.equal(report.passed, cases.length);
+  // No system recognizer here: the spoken cases are skipped.
+  assert.equal(report.skipped, cases.filter((testCase) => testCase.recognizer).length);
+  assert.equal(report.passed + report.skipped, cases.length);
 });

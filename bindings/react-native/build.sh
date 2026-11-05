@@ -23,11 +23,19 @@ cargo run -q -p uniffi-bindgen -- generate --library "$library" --language kotli
 case " $platforms " in *" ios "*)
   rm -rf target/react-native "$here/ios/ShamaCore.xcframework"
   frameworks=""
-  for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+  for target in aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim; do
     IPHONEOS_DEPLOYMENT_TARGET=16.4 cargo build -q -p shama-ffi --release --target $target
+  done
+  # The device's framework, and the simulator's for both kinds of Mac (a Release build wants both).
+  for target in aarch64-apple-ios aarch64-apple-ios-sim; do
     framework=target/react-native/$target/$framework_name.framework
     mkdir -p $framework
-    cp target/$target/release/lib$name.dylib $framework/$framework_name
+    if [ $target = aarch64-apple-ios ]; then
+      cp target/$target/release/lib$name.dylib $framework/$framework_name
+    else
+      lipo -create target/$target/release/lib$name.dylib target/x86_64-apple-ios/release/lib$name.dylib \
+        -output $framework/$framework_name
+    fi
     install_name_tool -id @rpath/$framework_name.framework/$framework_name $framework/$framework_name
     platform=$([ $target = aarch64-apple-ios ] && echo iPhoneOS || echo iPhoneSimulator)
     cat > $framework/Info.plist <<PLIST

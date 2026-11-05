@@ -145,18 +145,18 @@ class ShamaModule : Module() {
     val file = options.optString("file").takeIf { it.isNotEmpty() }
     if (file != null) {
       val path = file.removePrefix("file://")
+      // A recording is heard by the fixture recognizer – or by the system's, when asked for.
+      val recognizer = if (options.optString("recognizer") == "os") osRecognizer(language) else null
       executor.execute {
         try {
-          emit(core.listenFile(json, path, null))
+          emit(core.listenFile(json, path, recognizer))
         } catch (error: Exception) {
           emit(JSONObject().put("event", "failed").put("message", error.message ?: error.toString()))
         }
       }
       return
     }
-    if (AndroidRecognizer.support(context, language) != "ready") {
-      throw CodedException("NoRecognizer", "This device has no recognizer on board for $language", null)
-    }
+    val recognizer = osRecognizer(language)
     val live = options.optString("mode") == "continuous" && options.optBoolean("echoCancellation")
     val capture = Capture(context, live) { pcm ->
       executor.execute { if (!held) emit(core.pushPcm16(pcm)) }
@@ -167,11 +167,18 @@ class ShamaModule : Module() {
     }
     onQueue {
       held = false
-      core.listen(json, Capture.RATE_UNSIGNED, AndroidRecognizer(context))
+      core.listen(json, Capture.RATE_UNSIGNED, recognizer)
     }
     capture.start()
     this.capture = capture
     if (live) emit(JSONObject().put("event", "echoCancellation").put("available", capture.echoCancelled))
+  }
+
+  private fun osRecognizer(language: String): AndroidRecognizer {
+    if (AndroidRecognizer.support(context, language) != "ready") {
+      throw CodedException("NoRecognizer", "This device has no recognizer on board for $language", null)
+    }
+    return AndroidRecognizer(context)
   }
 
   /** An utterance's id as the core takes it – kept out of Expo's DSL, which Kotlin's compiler trips over. */

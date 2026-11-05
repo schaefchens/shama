@@ -1,9 +1,12 @@
 // Writes the self-test's WAV files: voice-like tones where tests/fixtures/audio.json says
 // something is said, a quiet room's hiss around them, and what is said in Shama's "shma" chunk,
-// which the fixture recognizer reads.
+// which the fixture recognizer reads. Cases for the system's recognizer are spoken instead, by
+// macOS's `say` – elsewhere they get tones, and fail where a system recognizer would run them.
 //
 //   node tools/fixtures.mjs <output folder>
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const rate = 48_000;
@@ -26,13 +29,35 @@ const voice = (i) => {
   return 0.05 * tone(140) + 0.03 * tone(280) + 0.02 * tone(560);
 };
 
+const voices = { en: 'Samantha', de: 'Anna', tr: 'Yelda', ar: 'Majed' };
+
+/** The text spoken by macOS's voice for the language, as samples at `rate` – or null. */
+function spoken(language, text) {
+  if (process.platform !== 'darwin' || !voices[language]) return null;
+  const folder = mkdtempSync(join(tmpdir(), 'shama-say-'));
+  try {
+    const file = join(folder, 'said.wav');
+    execFileSync('say', ['-v', voices[language], '-o', file, '--file-format=WAVE', `--data-format=LEI16@${rate}`, text]);
+    const wav = readFileSync(file);
+    const data = wav.indexOf('data', 12);
+    const pcm = wav.subarray(data + 8, data + 8 + wav.readUInt32LE(data + 4));
+    return Array.from({ length: pcm.length / 2 }, (_, i) => pcm.readInt16LE(i * 2) / 32768);
+  } catch {
+    return null;
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+}
+
 for (const fixture of cases.filter((fixture) => !fixture.text)) {
   const samples = [];
   const transcripts = [];
   const add = (ms, said) => {
     const start = Math.round((samples.length * 1000) / rate);
-    for (let i = 0; i < (ms * rate) / 1000; i++) samples.push(said === undefined ? hiss() : voice(i));
-    if (said !== undefined) transcripts.push({ startMs: start, endMs: start + ms, text: said });
+    const speech = said !== undefined && fixture.recognizer ? spoken(fixture.language, said) : null;
+    if (speech) samples.push(...speech);
+    else for (let i = 0; i < (ms * rate) / 1000; i++) samples.push(said === undefined ? hiss() : voice(i));
+    if (said !== undefined) transcripts.push({ startMs: start, endMs: Math.round((samples.length * 1000) / rate), text: said });
   };
   add(400);
   for (const said of fixture.utterances) {

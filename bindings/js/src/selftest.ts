@@ -14,6 +14,8 @@ export interface SelfTestCase {
   contexts?: string[];
   /** Said as text, not played from a recording: the test path without audio. */
   text?: boolean;
+  /** Spoken, and heard by the system's recognizer – skipped where it has none for the language. */
+  recognizer?: 'os';
   /** A fake AI's answer, for a case meant to reach stage 3. */
   ai?: AiReply;
   expect: Partial<Result>[];
@@ -22,6 +24,7 @@ export interface SelfTestCase {
 export interface SelfTestReport {
   passed: number;
   failed: number;
+  skipped: number;
   lines: string[];
 }
 
@@ -30,13 +33,19 @@ export async function selfTest(
   shama: Shama,
   options: { vocabulary: Vocabulary; cases: SelfTestCase[]; file: (name: string) => string; report?: (line: string) => void },
 ): Promise<SelfTestReport> {
-  const report: SelfTestReport = { passed: 0, failed: 0, lines: [] };
+  const report: SelfTestReport = { passed: 0, failed: 0, skipped: 0, lines: [] };
   const line = (text: string) => {
     report.lines.push(text);
     options.report?.(text);
   };
   await shama.setVocabulary(options.vocabulary);
+  const support = options.cases.some((testCase) => testCase.recognizer) ? await shama.languages() : [];
   for (const testCase of options.cases) {
+    if (testCase.recognizer && support.find((s) => s.language === testCase.language)?.os !== 'ready') {
+      report.skipped += 1;
+      line(`– ${testCase.name}: no recognizer on board for ${testCase.language}`);
+      continue;
+    }
     shama.reset();
     shama.setContext({ contexts: testCase.contexts ?? [], state: {} });
     shama.setMode(testCase.ai ? 'online' : 'offline');
@@ -59,13 +68,14 @@ export async function selfTest(
       line(`✓ ${testCase.name}`);
     }
   }
-  line(`${report.failed === 0 ? 'passed' : 'failed'}: ${report.passed} of ${report.passed + report.failed}`);
+  const skipped = report.skipped ? `, ${report.skipped} skipped` : '';
+  line(`${report.failed === 0 ? 'passed' : 'failed'}: ${report.passed} of ${report.passed + report.failed}${skipped}`);
   return report;
 }
 
 async function run(shama: Shama, testCase: SelfTestCase, file: string): Promise<Result[]> {
   if (testCase.text) return [await shama.start({ language: testCase.language, text: testCase.utterances[0] })];
-  if (!testCase.live) return [await shama.start({ language: testCase.language, file })];
+  if (!testCase.live) return [await shama.start({ language: testCase.language, file, recognizer: testCase.recognizer })];
   const results: Result[] = [];
   const stopResults = shama.on('result', (result) => results.push(result));
   const ended = new Promise<void>((resolve) => {

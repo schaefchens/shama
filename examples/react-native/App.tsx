@@ -27,7 +27,7 @@ export default function App() {
   const shama = useMemo(() => createNativeShama(), []);
   const [selfTesting, setSelfTesting] = useState(false);
   useEffect(() => {
-    const open = (url: string | null) => url?.includes('self-test') && setSelfTesting(true);
+    const open = (url?: string | null) => url?.includes('self-test') && setSelfTesting(true);
     void Linking.getInitialURL().then(open);
     const subscription = Linking.addEventListener('url', ({ url }) => open(url));
     return () => subscription.remove();

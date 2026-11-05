@@ -4,13 +4,14 @@
 
 import type { AiProvider } from './ai.ts';
 import { AiError } from './ai.ts';
-import type { ListenOptions, Endpointing, Port, PortEvent, RecognizerChoice } from './port.ts';
+import type { ListenOptions, Endpointing, LanguageSupport, Port, PortEvent, RecognizerChoice } from './port.ts';
 import type {
   ArgValue,
   Call,
   Checked,
   Hypothesis,
   Language,
+  Localized,
   Mode,
   Outcome,
   Pending,
@@ -120,6 +121,8 @@ export interface Shama {
   setAi(settings: AiSettings | null): void;
   addResolver(resolver: Resolver, options?: { name?: string; contexts?: string[] }): () => void;
   requestPermission(): Promise<boolean>;
+  /** What each language can be heard with here – the system's recognizer, an embedded model, none. */
+  languages(options?: { models?: Localized<string> }): Promise<LanguageSupport[]>;
   /** One push-to-talk turn: resolves with what became of it. */
   start(options: StartOptions): Promise<Result>;
   /** The talk button let go. */
@@ -630,6 +633,7 @@ export function createShama(port: Port): Shama {
       };
     },
     requestPermission: () => port.requestPermission(),
+    languages: (options) => port.configure(options ?? {}),
     async start(options) {
       if (session) throw new ShamaError('busy', 'Shama is already listening');
       await microphone(options);

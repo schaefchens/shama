@@ -145,6 +145,7 @@ public class ShamaModule: Module {
     var echoCancellation: Bool?
     var file: String?
     var text: String?
+    var recognizer: String?
   }
 
   private func listen(_ json: String) throws {
@@ -162,18 +163,18 @@ public class ShamaModule: Module {
     }
     if let file = options.file {
       let path = file.hasPrefix("file://") ? (URL(string: file)?.path ?? file) : file
+      // A recording is heard by the fixture recognizer – or by the system's, when asked for.
+      let recognizer: PlatformRecognizer? = options.recognizer == "os" ? try osRecognizer(options.language) : nil
       queue.async {
         do {
-          self.emit(json: try self.core.listenFile(options: json, path: path, recognizer: nil))
+          self.emit(json: try self.core.listenFile(options: json, path: path, recognizer: recognizer))
         } catch {
           self.emit(["event": "failed", "message": error.localizedDescription])
         }
       }
       return
     }
-    guard let recognizer = AppleRecognizer(language: options.language) else {
-      throw Exception(name: "NoRecognizer", description: "This device has no recognizer on board for \(options.language)")
-    }
+    let recognizer = try osRecognizer(options.language)
     let live = options.mode == "continuous"
     let capture = Capture(live: live && options.echoCancellation == true) { [weak self] samples in
       self?.queue.async {
@@ -200,6 +201,13 @@ public class ShamaModule: Module {
     if live && options.echoCancellation == true {
       emit(["event": "echoCancellation", "available": capture.echoCancelled])
     }
+  }
+
+  private func osRecognizer(_ language: String) throws -> AppleRecognizer {
+    guard let recognizer = AppleRecognizer(language: language) else {
+      throw Exception(name: "NoRecognizer", description: "This device has no recognizer on board for \(language)")
+    }
+    return recognizer
   }
 
   private func stopCapture() {
