@@ -21,6 +21,8 @@ case $platform in
     ;;
   android)
     adb -s "$device" push $models/. /sdcard/Android/data/$app/files/shama-models/ > /dev/null
+    # Folders adb makes there are the shell's: the app may read them only when they are opened up.
+    adb -s "$device" shell chmod -R o+rX /sdcard/Android/data/$app
     ;;
   *) echo "usage: sh tools/e2e_react_native.sh ios|android <device>" >&2; exit 1 ;;
 esac

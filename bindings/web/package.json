@@ -16,6 +16,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./node": {
+      "source": "./src/node.ts",
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
     }
   },
   "scripts": {
@@ -35,6 +40,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@types/node": "26.6.6",
     "typescript": "6.0.3"
   }
 }

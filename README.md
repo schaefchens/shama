@@ -81,6 +81,7 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 - **Context and state:** `shama.setContext({ contexts: ['reading'], state: { book: 'moby', chapter: 3 } })` – or `useShamaContext` per screen.
 - **AI:** `shama.setAi({ brief, device: true, external: anthropic({ client, model: 'claude-opus-5-5' }) })` and `shama.setMode('online')`.
 - **Your own stage 2:** `shama.addResolver(({ heard }) => search(heard[0].text))`.
+- **Your tests:** `createNodeShama()` from `@schaefchens/shama-web/node` is Shama in Node – the core as WASM, settling texts (`start({ language, text })`) and recordings with your vocabulary, no device needed.
 - **Embedded models:** `node tools/models.mjs <folder> fa-rizeh tr-seda` fetches them, checked, into a folder per language; bundle it or download the same files, and pass the folders to `shama.languages({ models: { fa: …, tr: … } })`. Where the system has no recognizer for a language, Shama uses the model; `recognizer: 'os' | 'embedded'` chooses. A model's `shama-model.json` names its license and the credit it asks for.
 
 [examples/react-native](examples/react-native) and [examples/web](examples/web) are a whole app each: an audiobook reader's voice control in five languages, with a self-test.
