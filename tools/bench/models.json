@@ -1,0 +1,105 @@
+{
+  "fa-rizeh": {
+    "family": "nemo_ctc",
+    "dir": "sherpa-onnx-nemo-ctc-fa-shenava-rizeh-v1.0-non-streaming-int8-2026-06-26",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "fa-pizeh": {
+    "family": "nemo_ctc",
+    "dir": "sherpa-onnx-nemo-ctc-fa-shenava-rizeh-pizeh-v1.0-non-streaming-int8-2026-06-26",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "fa-koochik": {
+    "family": "nemo_ctc",
+    "dir": "sherpa-onnx-nemo-ctc-fa-shenava-koochik-v1.0-non-streaming-int8-2026-06-26",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "dolphin-base": {
+    "family": "dolphin",
+    "dir": "sherpa-onnx-dolphin-base-ctc-multi-lang-int8-2025-04-02",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "omni-300m": {
+    "family": "omnilingual",
+    "dir": "sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-v2-int8-2026-02-05",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "whisper-base": {
+    "family": "whisper",
+    "dir": "sherpa-onnx-whisper-base",
+    "files": {
+      "encoder": "base-encoder.int8.onnx",
+      "decoder": "base-decoder.int8.onnx",
+      "tokens": "base-tokens.txt"
+    }
+  },
+  "de-nemo-transducer": {
+    "family": "nemo_transducer",
+    "dir": "sherpa-onnx-nemo-transducer-stt_de_fastconformer_hybrid_large_pc-int8",
+    "files": {
+      "encoder": "encoder.int8.onnx",
+      "decoder": "decoder.int8.onnx",
+      "joiner": "joiner.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "fastconformer-en-de-es-fr": {
+    "family": "nemo_ctc",
+    "dir": "sherpa-onnx-nemo-fast-conformer-ctc-en-de-es-fr-14288-int8",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "en-parakeet-110m": {
+    "family": "nemo_ctc",
+    "dir": "sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8",
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "en-moonshine-tiny": {
+    "family": "moonshine",
+    "dir": "sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27",
+    "files": {
+      "encoder": "encoder_model.ort",
+      "merged_decoder": "decoder_model_merged.ort",
+      "tokens": "tokens.txt"
+    }
+  },
+  "tr-seda": {
+    "family": "online_transducer",
+    "dir": "seda-v0.1",
+    "files": {
+      "encoder": "encoder.int8.onnx",
+      "decoder": "decoder.onnx",
+      "joiner": "joiner.int8.onnx",
+      "tokens": "tokens.txt"
+    }
+  },
+  "whisper-small": {
+    "family": "whisper",
+    "dir": "sherpa-onnx-whisper-small",
+    "files": {
+      "encoder": "small-encoder.int8.onnx",
+      "decoder": "small-decoder.int8.onnx",
+      "tokens": "small-tokens.txt"
+    }
+  }
+}

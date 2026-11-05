@@ -1,0 +1,10 @@
+sherpa-onnx-nemo-ctc-fa-shenava-rizeh-v1.0-non-streaming-int8-2026-06-26.tar.bz2 31045254 649184fb68e12cfba7146d3ce98d14225771bcbaa54c25df20b23f22c93b3391
+sherpa-onnx-nemo-ctc-fa-shenava-rizeh-pizeh-v1.0-non-streaming-int8-2026-06-26.tar.bz2 11708616 e5369d24aeee14afac8277937e43ebaed20444a09e34de452387916293b07b9d
+sherpa-onnx-nemo-ctc-fa-shenava-koochik-v1.0-non-streaming-int8-2026-06-26.tar.bz2 99346175 45847bbd09aa895770e94a1eedb0866e357b60679155ffd05dc21e480d5c4d3b
+sherpa-onnx-dolphin-base-ctc-multi-lang-int8-2025-04-02.tar.bz2 80671385 none
+sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-v2-int8-2026-02-05.tar.bz2 292313120 951b32409aade32bd525310bb39e9666773ba3fc611a39e817f620936d76c631
+sherpa-onnx-whisper-base.tar.bz2 207557382 none
+sherpa-onnx-nemo-transducer-stt_de_fastconformer_hybrid_large_pc-int8.tar.bz2 108124747 73b3cce9f94a19fc04bc54b55abd576b622e3925a84ddd554a95e5984bc11677
+sherpa-onnx-nemo-fast-conformer-ctc-en-de-es-fr-14288-int8.tar.bz2 102875642 ea7434ecff117272a70b8a60b70cfc2f04b9b07553aa0ecb91065b69c7b91ec5
+sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27.tar.bz2 29858559 9ec31b342d8fa3240c3b81b8f82e1cf7e3ac467c93ca5a999b741d5887164f8d
+sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2 104337827 17f945007b52ccd8b7200ffc7c5652e9e8e961dfdf479cefcabd06cf5703630b

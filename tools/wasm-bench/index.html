@@ -1,0 +1,102 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Shama WASM bench</title>
+<script>
+  // sherpa-onnx's prebuilt WebAssembly (a VAD + offline ASR build). Its bundled model package is
+  // replaced by a stub: the measured model is fetched and written into its file system instead.
+  var Module = {
+    locateFile: (file) => `/sherpa/${file}`,
+    onRuntimeInitialized: () => {
+      window.runtimeReady = performance.now();
+    },
+  };
+  window.pageStart = performance.now();
+</script>
+<script src="/sherpa/sherpa-onnx-asr.js"></script>
+<script src="/sherpa/sherpa-onnx-wasm-main-vad-asr.js"></script>
+<script>
+  function pcm(buffer) {
+    const view = new DataView(buffer);
+    let at = 12;
+    while (at + 8 <= view.byteLength) {
+      const id = String.fromCharCode(view.getUint8(at), view.getUint8(at + 1), view.getUint8(at + 2), view.getUint8(at + 3));
+      const size = view.getUint32(at + 4, true);
+      if (id === 'data') {
+        const samples = new Float32Array(size / 2);
+        for (let i = 0; i < samples.length; i++) samples[i] = view.getInt16(at + 8 + i * 2, true) / 32768;
+        return samples;
+      }
+      at += 8 + size + (size % 2);
+    }
+    throw new Error('no data chunk');
+  }
+
+  // The build exports the file packager's helpers, not FS itself.
+  async function put(url, name) {
+    const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    Module.FS_createDataFile('/m', name.slice(3), bytes, true, true, true);
+    return bytes.length;
+  }
+
+  // spec: { family, dir, files: { key: file }, language? }; items: [{ id, file, expected, kind }]
+  window.bench = async function (spec, items) {
+    const t0 = performance.now();
+    try {
+      Module.FS_createPath('/', 'm', true, true);
+    } catch {}
+    let bytes = 0;
+    const local = {};
+    for (const [key, file] of Object.entries(spec.files)) {
+      local[key] = `/m/${key}-${file}`;
+      bytes += await put(`/models/${spec.dir}/${file}`, local[key]);
+    }
+    const fetched = performance.now();
+    const modelConfig = { tokens: local.tokens, numThreads: 1, debug: 0 };
+    let recognizer;
+    let online = false;
+    if (spec.family === 'nemo_ctc') modelConfig.nemoCtc = { model: local.model };
+    else if (spec.family === 'dolphin') modelConfig.dolphin = { model: local.model };
+    else if (spec.family === 'omnilingual') modelConfig.omnilingual = { model: local.model };
+    else if (spec.family === 'whisper') modelConfig.whisper = { encoder: local.encoder, decoder: local.decoder, language: spec.language, task: 'transcribe' };
+    else if (spec.family === 'nemo_transducer') {
+      modelConfig.transducer = { encoder: local.encoder, decoder: local.decoder, joiner: local.joiner };
+      modelConfig.modelType = 'nemo_transducer';
+    } else if (spec.family === 'online_transducer') {
+      online = true;
+      recognizer = new OnlineRecognizer({ modelConfig: { transducer: { encoder: local.encoder, decoder: local.decoder, joiner: local.joiner }, tokens: local.tokens, numThreads: 1 }, decodingMethod: 'greedy_search' }, Module);
+    }
+    if (!recognizer) recognizer = new OfflineRecognizer({ modelConfig, decodingMethod: 'greedy_search' }, Module);
+    const created = performance.now();
+    const results = [];
+    for (const item of items) {
+      const audio = pcm(await (await fetch(`/${item.file}`)).arrayBuffer());
+      const samples = new Float32Array(4800 + audio.length + 6400);
+      samples.set(audio, 4800);
+      const t = performance.now();
+      let text;
+      if (online) {
+        const stream = recognizer.createStream();
+        stream.acceptWaveform(16000, samples);
+        stream.inputFinished();
+        while (recognizer.isReady(stream)) recognizer.decode(stream);
+        text = recognizer.getResult(stream).text;
+        stream.free();
+      } else {
+        const stream = recognizer.createStream();
+        stream.acceptWaveform(16000, samples);
+        recognizer.decode(stream);
+        text = recognizer.getResult(stream).text;
+        stream.free();
+      }
+      results.push({ id: item.id, kind: item.kind, voice: item.voice, expected: item.expected, hypotheses: [{ text: (text ?? '').trim() }], decode_ms: Math.round((performance.now() - t) * 10) / 10, audio_ms: Math.round(audio.length / 16) });
+    }
+    return {
+      runtimeMs: Math.round(window.runtimeReady - window.pageStart),
+      modelBytes: bytes,
+      fetchMs: Math.round(fetched - t0),
+      createMs: Math.round(created - fetched),
+      wasmMemoryMb: Math.round(Module.HEAPU8.length / 1e6),
+      results,
+    };
+  };
+</script>

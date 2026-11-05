@@ -1,0 +1,6 @@
+# Build outputs and caches of the measuring tools.
+*/target/
+*/.build/
+*/build/
+*/.gradle/
+*/node_modules/
