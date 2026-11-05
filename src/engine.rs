@@ -8,7 +8,23 @@ use crate::listen::Utterance;
 use crate::wav::Transcript;
 use std::collections::VecDeque;
 
+/// Native platforms move a listener to a worker thread; the web runs it in one worker.
+#[cfg(not(target_arch = "wasm32"))]
 pub trait Recognizer: Send {
+    /// Named in results' trails: "os", "embedded:…", "fixture".
+    fn name(&self) -> String;
+
+    /// The readings of an utterance, the likeliest first; `bias` lists phrases to favor.
+    fn recognize(
+        &mut self,
+        language: Language,
+        bias: &[String],
+        utterance: &Utterance,
+    ) -> Result<Vec<Hypothesis>, String>;
+}
+
+#[cfg(target_arch = "wasm32")]
+pub trait Recognizer {
     /// Named in results' trails: "os", "embedded:…", "fixture".
     fn name(&self) -> String;
 

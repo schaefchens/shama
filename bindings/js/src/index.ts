@@ -25,3 +25,5 @@ export type {
   RecognizerChoice,
 } from './port.ts';
 export type * from './types.ts';
+export { selfTest } from './selftest.ts';
+export type { SelfTestCase, SelfTestReport } from './selftest.ts';

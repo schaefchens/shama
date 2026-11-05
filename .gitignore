@@ -3,3 +3,5 @@ node_modules/
 dist/
 # Models, corpora and measuring runs the tools fetch or make: large, licensed one by one, outside git.
 .cache/
+# Built by bindings/web/build.sh.
+bindings/web/src/generated/

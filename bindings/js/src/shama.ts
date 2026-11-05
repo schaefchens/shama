@@ -81,7 +81,7 @@ export interface StartOptions {
 
 export type LiveState = 'off' | 'listening' | 'speaking' | 'interruptOnly' | 'paused';
 
-export type LiveEnd = 'toggle' | 'command' | 'quiet' | 'interrupted' | 'failed';
+export type LiveEnd = 'toggle' | 'command' | 'quiet' | 'interrupted' | 'ended' | 'failed';
 
 export interface LiveOptions {
   language: Language;
@@ -496,7 +496,8 @@ export function createShama(port: Port): Shama {
         void endLive('interrupted');
         break;
       case 'done':
-        void endLive('failed');
+        // The audio ended – a file read through: after what it said has been settled.
+        current.queue = current.queue.then(() => endLive('ended'));
         break;
       default:
         break;

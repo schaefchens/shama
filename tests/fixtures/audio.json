@@ -1,0 +1,23 @@
+[
+  { "name": "en-open", "language": "en", "utterances": ["read Moby Dick chapter three"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
+  { "name": "de-open", "language": "de", "utterances": ["lies das dritte Kapitel von Faust"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "faust", "chapter": 3 } }] }] },
+  { "name": "tr-open", "language": "tr", "utterances": ["Moby Dick üçüncü bölüm oku"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
+  { "name": "ar-open", "language": "ar", "utterances": ["اقرأ موبي ديك الفصل الثالث"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
+  { "name": "fa-open", "language": "fa", "utterances": ["موبی دیک فصل سه را بخوان"],
+    "expect": [{ "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "moby", "chapter": 3 } }] }] },
+  { "name": "en-nothing", "language": "en", "utterances": [],
+    "expect": [{ "kind": "unresolved", "reason": "nothingHeard" }] },
+  { "name": "en-ai", "language": "en", "utterances": ["the one about the white whale"],
+    "ai": { "calls": [{ "tool": "open", "args": { "book": "moby" } }] },
+    "expect": [{ "kind": "call", "stage": "ai", "calls": [{ "tool": "open", "args": { "book": "moby" } }] }] },
+  { "name": "en-live", "language": "en", "live": true, "contexts": ["reading"], "utterances": ["read Faust", "next chapter", "stop listening"],
+    "expect": [
+      { "kind": "call", "stage": "deterministic", "calls": [{ "tool": "open", "args": { "book": "faust" } }] },
+      { "kind": "call", "stage": "deterministic", "calls": [{ "tool": "move", "args": { "step": "next" } }] },
+      { "kind": "stopListening" }
+    ] }
+]

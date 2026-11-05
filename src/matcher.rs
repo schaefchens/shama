@@ -186,7 +186,7 @@ impl Compiled {
 
     /// A call filled from the app's state where it says nothing else, then asked for what it
     /// still lacks, or for confirmation.
-    pub(crate) fn finish(&self, turn: &Turn, mut call: Call) -> Outcome {
+    pub fn finish(&self, turn: &Turn, mut call: Call) -> Outcome {
         let Some(tool) = self.tool(&call.tool) else { return Outcome::Call { calls: vec![call] } };
         // The app's state fills in only where what was said agrees with it: "verse 16" while
         // reading John 3 is John 3:16; "Psalm" is not Psalm 3.
