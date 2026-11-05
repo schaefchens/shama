@@ -3,10 +3,15 @@
   "private": true,
   "workspaces": [
     "bindings/js",
-    "bindings/web"
+    "bindings/web",
+    "bindings/react"
   ],
   "scripts": {
-    "build": "npm run build -w bindings/js -w bindings/web",
-    "test": "npm test -w bindings/js"
+    "build": "npm run build -w bindings/js -w bindings/web -w bindings/react",
+    "test": "npm test -w bindings/js -w bindings/react"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
-      - run: npm run typecheck -w bindings/js
+      - run: npm run typecheck -w bindings/js -w bindings/react
       - run: npm test
 
   web:
