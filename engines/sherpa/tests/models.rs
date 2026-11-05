@@ -56,6 +56,8 @@ fn commands(language: Language, count: usize) -> Vec<(Vec<f32>, String)> {
         .collect()
 }
 
+/// Each model hears at least as many of nine fixed commands as measured, less a margin: six,
+/// and four for Arabic, which no model hears well.
 #[test]
 fn the_measured_models_hear_commands() {
     let models = [
@@ -100,9 +102,22 @@ fn the_measured_models_hear_commands() {
                 &[("model", "model.int8.onnx"), ("tokens", "tokens.txt")],
             ),
         ),
+        (
+            "sherpa-onnx-whisper-small",
+            manifest(
+                "ar-whisper-small",
+                Language::Ar,
+                "whisper",
+                &[
+                    ("encoder", "small-encoder.int8.onnx"),
+                    ("decoder", "small-decoder.int8.onnx"),
+                    ("tokens", "small-tokens.txt"),
+                ],
+            ),
+        ),
     ];
     let mut tested = 0;
-    for (folder, manifest) in models {
+    for ((folder, manifest), least) in models.into_iter().zip([6, 6, 6, 6, 4]) {
         let folder = root().join(".cache/models").join(folder);
         let language = manifest.language;
         let samples = commands(language, 9);
@@ -124,8 +139,9 @@ fn the_measured_models_hear_commands() {
             }
         }
         eprintln!("{}: {heard} of {} fixed commands close", recognizer.name(), samples.len());
-        assert!(heard * 3 >= samples.len() * 2, "{}: only {heard} of {}", recognizer.name(), samples.len());
-        assert!(recognizer.recognize(Language::Ar, &[], &Utterance::new(vec![0.0; 1600], 0, 0)).is_err());
+        assert!(heard >= least, "{}: only {heard} of {}", recognizer.name(), samples.len());
+        let other = if language == Language::En { Language::De } else { Language::En };
+        assert!(recognizer.recognize(other, &[], &Utterance::new(vec![0.0; 1600], 0, 0)).is_err());
         tested += 1;
     }
     eprintln!("{tested} models tested");

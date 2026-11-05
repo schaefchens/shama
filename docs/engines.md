@@ -150,29 +150,23 @@ What else the runs show:
 | Whisper | MIT | |
 | Vosk | – | out: no free iOS library, no small Arabic model |
 
-## Proposed decision
+## Decision (2026-11-05)
 
-| Language | iOS | Android | Web |
-| --- | --- | --- | --- |
-| en | Apple, biased | Google | Parakeet 110M (Moonshine tiny where size counts) |
-| de | Apple, biased, with NeMo de as a second hearing | Google, with NeMo de as a second hearing | NeMo FastConformer de |
-| tr | seda (Apple if a phone shows tr on the device) | Google | seda – needs a streaming WASM build |
-| ar | open – Whisper small for now | open – Whisper small for now | open |
-| fa | Shenava Rizeh (Koochik where 130 MB is fine) | Shenava Rizeh | Shenava Rizeh |
+The system's recognizer where it hears the language on the device, always biased with the app's phrases; Shama's embedded model (sherpa-onnx) where it doesn't, on the web, and when an app asks for it. The models are catalogued in [engines/sherpa/models.json](../engines/sherpa/models.json), fetched and checked by `tools/models.mjs`.
 
-- **The plan's targets aren't met on this synthetic corpus:** 97 % for en and de, 95 % for tr, ar and fa. Google's Turkish comes nearest (92 % close). Fixed commands nearly reach them; names and numbers don't.
-- **The rule "OS if it's within 2 points of the embedded model":**
-  - It holds for en (Google 70 against Parakeet 58; Apple biased 60).
-  - It holds for tr on Android (92 against 81).
-  - It narrowly fails for de: Google 35 and Apple 32 against NeMo's 37. Yet the OS recognizers hear de's fixed commands far better (Apple 98 against 75).
-  - So: the OS where it recognizes on the device, always biased with the vocabulary. The embedded model is the fallback, and the second hearing in stage 2 where the OS is weak on names. Recheck with people's voices.
-- **Arabic stays open:** no system recognizer on any platform, and no small open model that fits.
-  - Whisper small, told the language, hears commands best (58 % close), but costs 375 MB and 1.4 s per command on the Mac – more on a phone.
-  - Omnilingual reads real voices well (FLEURS CER 6.4 %) but the synthetic commands badly, at 366 MB and 1.7 s.
-  - Next: export NVIDIA's Arabic FastConformer (115M, CC BY 4.0, FLEURS WER 14 % as published), and record Arabic commands from people – the synthetic voices distort this language most.
-- **Runtime:** sherpa-onnx stays.
-  - Android's 26.5 MB per ABI is just over the 25 MB line. ONNX Runtime can be built with only the operators these models use: sherpa takes its own ONNX Runtime.
-  - In the browser, p95 stays below 0.6 s, far from the 3 s line.
+| Language | iOS | Android | Web | Embedded model |
+| --- | --- | --- | --- | --- |
+| en | Apple | Google | embedded | `en-parakeet` (132 MB), `en-moonshine-tiny` (44 MB) where size counts |
+| de | Apple | Google | embedded | `de-fastconformer` (136 MB) |
+| tr | embedded, or Apple where a phone has tr on the device | Google | embedded | `tr-seda` (73 MB) |
+| ar | Apple where a phone has ar on the device, else embedded | embedded | embedded | `ar-whisper-small` (375 MB): weak, for now |
+| fa | embedded | embedded | embedded | `fa-rizeh` (38 MB) |
+
+- **Persian:** k2-fsa's int8 export of Shenava Rizeh, measured here. The author's own repos are Apache-2.0; k2-fsa's export still says CC BY-NC 4.0.
+- **Arabic stays open:** Whisper small hears 58 % of commands closely, at 375 MB and 1.4 s per command on the Mac. Next: NVIDIA's Arabic FastConformer, and commands recorded by people.
+- **Credits:** the NeMo models (en, de) are CC BY 4.0, and an app using them credits them; each model's `shama-model.json` carries its license and credit.
+- **Not yet:** a second hearing by the embedded model in stage 2, where the OS is weak on names; the web's embedded engine; a trimmed ONNX Runtime for Android's 26.5 MB per ABI.
+- **The plan's targets aren't met on this synthetic corpus** (97 % for en and de, 95 % for tr, ar and fa). Fixed commands nearly reach them; names and numbers don't. Recheck with people's voices.
 
 ## Not measured here
 

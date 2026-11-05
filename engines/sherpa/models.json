@@ -2,12 +2,12 @@
   "fa-rizeh": {
     "language": "fa",
     "family": "nemo_ctc",
-    "license": "Apache-2.0",
-    "credit": "Shenava Rizeh by Reza2kn on Hugging Face, Apache-2.0",
-    "source": "https://huggingface.co/Reza2kn/Shenava-Rizeh-v1.0-sherpa-onnx/resolve/57173ab4b3f6a646e1664e02f8bbec5a9386cabc/",
+    "license": "Apache-2.0 on the author's repos; k2-fsa's export says CC BY-NC 4.0",
+    "credit": "Shenava Rizeh by Reza2kn on Hugging Face, exported by k2-fsa",
+    "archive": ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-ctc-fa-shenava-rizeh-v1.0-non-streaming-int8-2026-06-26.tar.bz2", 31045254, "649184fb68e12cfba7146d3ce98d14225771bcbaa54c25df20b23f22c93b3391"],
     "files": {
-      "model": ["model.onnx", 116700660, "ec66d191f1eee10a1cc4b58ce5d2d328e160193975e118139e4600102550255b"],
-      "tokens": ["tokens.txt", 12236, "8e192963f6e666dfa5721e5cbd4710bc1ef592460a45f08cefc94b2db16a6954"]
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
     }
   },
   "tr-seda": {
@@ -28,35 +28,47 @@
     "family": "nemo_transducer",
     "license": "CC-BY-4.0",
     "credit": "NVIDIA NeMo stt_de_fastconformer_hybrid_large_pc, CC BY 4.0, exported by k2-fsa",
-    "archive": [
-      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-transducer-stt_de_fastconformer_hybrid_large_pc-int8.tar.bz2",
-      108124747,
-      "73b3cce9f94a19fc04bc54b55abd576b622e3925a84ddd554a95e5984bc11677"
-    ],
-    "files": { "encoder": "encoder.int8.onnx", "decoder": "decoder.int8.onnx", "joiner": "joiner.int8.onnx", "tokens": "tokens.txt" }
+    "archive": ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-transducer-stt_de_fastconformer_hybrid_large_pc-int8.tar.bz2", 108124747, "73b3cce9f94a19fc04bc54b55abd576b622e3925a84ddd554a95e5984bc11677"],
+    "files": {
+      "encoder": "encoder.int8.onnx",
+      "decoder": "decoder.int8.onnx",
+      "joiner": "joiner.int8.onnx",
+      "tokens": "tokens.txt"
+    }
   },
   "en-parakeet": {
     "language": "en",
     "family": "nemo_ctc",
     "license": "CC-BY-4.0",
     "credit": "NVIDIA NeMo parakeet-tdt_ctc-110m, CC BY 4.0, exported by k2-fsa",
-    "archive": [
-      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2",
-      104337827,
-      "17f945007b52ccd8b7200ffc7c5652e9e8e961dfdf479cefcabd06cf5703630b"
-    ],
-    "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" }
+    "archive": ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2", 104337827, "17f945007b52ccd8b7200ffc7c5652e9e8e961dfdf479cefcabd06cf5703630b"],
+    "files": {
+      "model": "model.int8.onnx",
+      "tokens": "tokens.txt"
+    }
   },
   "en-moonshine-tiny": {
     "language": "en",
     "family": "moonshine",
     "license": "MIT",
     "credit": "Moonshine tiny by Useful Sensors, MIT, exported by k2-fsa",
-    "archive": [
-      "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27.tar.bz2",
-      29858559,
-      "9ec31b342d8fa3240c3b81b8f82e1cf7e3ac467c93ca5a999b741d5887164f8d"
-    ],
-    "files": { "encoder": "encoder_model.ort", "merged_decoder": "decoder_model_merged.ort", "tokens": "tokens.txt" }
+    "archive": ["https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27.tar.bz2", 29858559, "9ec31b342d8fa3240c3b81b8f82e1cf7e3ac467c93ca5a999b741d5887164f8d"],
+    "files": {
+      "encoder": "encoder_model.ort",
+      "merged_decoder": "decoder_model_merged.ort",
+      "tokens": "tokens.txt"
+    }
+  },
+  "ar-whisper-small": {
+    "language": "ar",
+    "family": "whisper",
+    "license": "MIT",
+    "credit": "Whisper small by OpenAI, MIT, exported by k2-fsa",
+    "source": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/8f3c18b358db4d1f2fc1eae49d75cd20989e4309/",
+    "files": {
+      "encoder": ["small-encoder.int8.onnx", 112442483, "4cbe7b22fa9026b843b60a68640c747de05bafb1a11b57edc0e66c232d9f33a9"],
+      "decoder": ["small-decoder.int8.onnx", 262226114, "acad50b5c782696e91b55914cc5ab4f756f1532f76e22aa6fc615f39fb69a8ee"],
+      "tokens": ["small-tokens.txt", 816730, "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126"]
+    }
   }
 }
