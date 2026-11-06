@@ -133,6 +133,8 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          # A phone's screen, as the flows were written on: 1080 × 2400.
+          profile: pixel_7
           emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
           script: sh tools/ci-android.sh emulator-5554

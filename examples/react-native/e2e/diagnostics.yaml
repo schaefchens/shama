@@ -28,12 +28,14 @@ appId: de.schaefchens.shama.example
           optional: true
 - longPressOn:
     id: talk
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
+      id: meter-graph
+    timeout: 20000
+- scrollUntilVisible:
+    element:
       id: input-device
     timeout: 20000
-- assertVisible:
-    id: meter-graph
 - tapOn:
     id: tab-Log
 - assertVisible:

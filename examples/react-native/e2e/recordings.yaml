@@ -30,17 +30,19 @@ appId: de.schaefchens.shama.example
     id: "play-.*"
 - tapOn:
     id: "save-.*"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "saved-.*"
       text: ".*shama-recordings/shama-.*\\.wav"
     timeout: 10000
 - tapOn:
     id: "again-.*"
-- extendedWaitUntil:
-    visible:
-      text: ".*#\\d+ · .* · ended by .*"
-    timeout: 15000
+# Heard again: a second utterance, at the top of the list.
+- scrollUntilVisible:
+    element:
+      id: utterance-2
+    direction: UP
+    timeout: 20000
 - tapOn:
     id: tab-Log
 - assertVisible:
