@@ -1,5 +1,6 @@
 # The microphone with diagnostics on a simulator or emulator: hold to talk, then what Shama told
-# of the microphone, the meter, and the log. Whatever the device's microphone hears will do.
+# of the microphone, the meter, and the log. Whatever the device's microphone hears will do. In
+# Turkish: its embedded model is what the device test puts on every device.
 appId: de.schaefchens.shama.example
 ---
 - launchApp
@@ -15,6 +16,7 @@ appId: de.schaefchens.shama.example
       - tapOn: Cancel
 - tapOn:
     id: tab-Listen
+- tapOn: "tr"
 - longPressOn:
     id: talk
 # The permissions, asked for at the first press: the microphone, and on iOS speech recognition.

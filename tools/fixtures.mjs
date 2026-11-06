@@ -1,7 +1,8 @@
 // Writes the self-test's WAV files: voice-like tones where tests/fixtures/audio.json says
 // something is said, a quiet room's hiss around them, and what is said in Shama's "shma" chunk,
-// which the fixture recognizer reads. Cases for the system's recognizer are spoken instead, by
-// macOS's `say` – elsewhere they get tones, and fail where a system recognizer would run them.
+// which the fixture recognizer reads. Cases for a recognizer are spoken instead: by the recording
+// tests/fixtures/spoken has for the case, else by macOS's `say` – elsewhere they get tones, and
+// fail where a recognizer would run them.
 //
 //   node tools/fixtures.mjs <output folder>
 import { execFileSync } from 'node:child_process';
@@ -31,6 +32,30 @@ const voice = (i) => {
 
 const voices = { en: 'Samantha', de: 'Anna', tr: 'Yelda', ar: 'Majed' };
 
+/** A 16-bit mono WAV's samples at `rate`, by linear interpolation – the core resamples it back. */
+function samplesOf(wav) {
+  const format = wav.indexOf('fmt ', 12);
+  const from = wav.readUInt32LE(format + 12);
+  const data = wav.indexOf('data', 12);
+  const pcm = wav.subarray(data + 8, data + 8 + wav.readUInt32LE(data + 4));
+  const source = Array.from({ length: pcm.length / 2 }, (_, i) => pcm.readInt16LE(i * 2) / 32768);
+  return Array.from({ length: Math.floor((source.length * rate) / from) }, (_, i) => {
+    const at = (i * from) / rate;
+    const before = Math.floor(at);
+    const after = Math.min(before + 1, source.length - 1);
+    return source[before] + (source[after] - source[before]) * (at - before);
+  });
+}
+
+/** The case's own recording in tests/fixtures/spoken, as samples at `rate` – or null. */
+function recorded(name) {
+  try {
+    return samplesOf(readFileSync(new URL(`../tests/fixtures/spoken/${name}.wav`, import.meta.url)));
+  } catch {
+    return null;
+  }
+}
+
 /** The text spoken by macOS's voice for the language, as samples at `rate` – or null. */
 function spoken(language, text) {
   if (process.platform !== 'darwin' || !voices[language]) return null;
@@ -38,10 +63,7 @@ function spoken(language, text) {
   try {
     const file = join(folder, 'said.wav');
     execFileSync('say', ['-v', voices[language], '-o', file, '--file-format=WAVE', `--data-format=LEI16@${rate}`, text]);
-    const wav = readFileSync(file);
-    const data = wav.indexOf('data', 12);
-    const pcm = wav.subarray(data + 8, data + 8 + wav.readUInt32LE(data + 4));
-    return Array.from({ length: pcm.length / 2 }, (_, i) => pcm.readInt16LE(i * 2) / 32768);
+    return samplesOf(readFileSync(file));
   } catch {
     return null;
   } finally {
@@ -54,7 +76,7 @@ for (const fixture of cases.filter((fixture) => !fixture.text && !fixture.record
   const transcripts = [];
   const add = (ms, said) => {
     const start = Math.round((samples.length * 1000) / rate);
-    const speech = said !== undefined && fixture.recognizer ? spoken(fixture.language, said) : null;
+    const speech = said !== undefined && fixture.recognizer ? (recorded(fixture.name) ?? spoken(fixture.language, said)) : null;
     if (speech) samples.push(...speech);
     else for (let i = 0; i < (ms * rate) / 1000; i++) samples.push(said === undefined ? hiss() : voice(i));
     if (said !== undefined) transcripts.push({ startMs: start, endMs: Math.round((samples.length * 1000) / rate), text: said });

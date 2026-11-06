@@ -17,11 +17,12 @@ appId: de.schaefchens.shama.example
     id: tab-Listen
 - tapOn:
     id: recording-en-open
-- extendedWaitUntil:
-    visible:
+# Below the fold where the demo says that nothing here hears the language.
+- scrollUntilVisible:
+    element:
       id: result
       text: "open\\(book=moby, chapter=3\\) · deterministic"
-    timeout: 15000
+    timeout: 20000
 - scrollUntilVisible:
     element:
       id: "play-.*"
