@@ -22,7 +22,10 @@ case $platform in
   android)
     adb -s "$device" push $models/. /sdcard/Android/data/$app/files/shama-models/ > /dev/null
     # Folders adb makes there are the shell's: the app may read them only when they are opened up.
-    adb -s "$device" shell chmod -R o+rX /sdcard/Android/data/$app
+    # Once the app has run they are its own, and not adb's to change – nor need they be.
+    adb -s "$device" shell "chmod -R o+rX /sdcard/Android/data/$app 2> /dev/null || true"
+    # The microphone allowed beforehand: no dialog in the way of the flows.
+    adb -s "$device" shell pm grant $app android.permission.RECORD_AUDIO
     ;;
   *) echo "usage: sh tools/e2e_react_native.sh ios|android <device>" >&2; exit 1 ;;
 esac

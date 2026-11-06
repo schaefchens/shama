@@ -3,6 +3,11 @@
 appId: de.schaefchens.shama.example
 ---
 - launchApp
+# A first launch after installing may take a while to run its JavaScript.
+- extendedWaitUntil:
+    visible:
+      id: tab-Listen
+    timeout: 60000
 - repeat:
     while:
       visible: "Open in .*"
