@@ -5,7 +5,8 @@ class ShamaCapture extends AudioWorkletProcessor {
   constructor() {
     super();
     this.out = null;
-    this.piece = new Float32Array(Math.round(sampleRate / 50));
+    this.size = Math.round(sampleRate / 50);
+    this.piece = new Float32Array(this.size);
     this.filled = 0;
     this.port.onmessage = (event) => {
       if (event.data && event.data.port) this.out = event.data.port;
@@ -22,8 +23,9 @@ class ShamaCapture extends AudioWorkletProcessor {
       for (const channel of channels) sum += channel[i];
       this.piece[this.filled++] = sum / channels.length;
       if (this.filled === this.piece.length) {
+        // Its buffer goes with it: the piece sent has no length left to size the next by.
         this.out.postMessage(this.piece, [this.piece.buffer]);
-        this.piece = new Float32Array(this.piece.length);
+        this.piece = new Float32Array(this.size);
         this.filled = 0;
       }
     }
