@@ -132,9 +132,7 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
-          script: |
-            adb install -r examples/react-native/android/app/build/outputs/apk/release/app-release.apk
-            sh tools/e2e_react_native.sh android emulator-5554
+          script: sh tools/ci-android.sh emulator-5554
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
