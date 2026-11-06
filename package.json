@@ -11,7 +11,8 @@
   ],
   "scripts": {
     "build": "npm run build -w bindings/js -w bindings/web -w bindings/react",
-    "test": "npm test -w bindings/js -w bindings/react"
+    "test": "npm test -w bindings/js -w bindings/react",
+    "clean": "sh tools/clean.sh"
   },
   "overrides": {
     "react": "19.3.0",
