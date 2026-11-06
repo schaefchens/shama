@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 device=${1:-emulator-5554}
 out=${RUNNER_TEMP:-/tmp}
 adb -s "$device" install -r examples/react-native/android/app/build/outputs/apk/release/app-release.apk || exit 1
+# A slow emulator's "isn't responding" dialogs would cover the app: none are shown.
+adb -s "$device" shell settings put global hide_error_dialogs 1
 # The device's log all along: what it said last, should it go away.
 adb -s "$device" logcat -v time > "$out/logcat.txt" 2>&1 &
 logcat=$!
