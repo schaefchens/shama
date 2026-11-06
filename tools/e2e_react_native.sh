@@ -29,4 +29,24 @@ case $platform in
     ;;
   *) echo "usage: sh tools/e2e_react_native.sh ios|android <device>" >&2; exit 1 ;;
 esac
-maestro --device "$device" test examples/react-native/e2e/self-test.yaml examples/react-native/e2e/recordings.yaml examples/react-native/e2e/diagnostics.yaml
+# An emulator under load may drop off adb for a moment: before each flow, wait until it is back.
+reachable() {
+  [ $platform = android ] || return 0
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+    [ "$(adb -s "$device" get-state 2> /dev/null)" = device ] && return 0
+    adb reconnect offline > /dev/null 2>&1
+    sleep 2
+  done
+  return 1
+}
+
+failed=0
+for flow in self-test recordings diagnostics; do
+  if reachable && maestro --device "$device" test examples/react-native/e2e/$flow.yaml; then
+    echo "[Passed] $flow"
+  else
+    echo "[Failed] $flow"
+    failed=1
+  fi
+done
+exit $failed

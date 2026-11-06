@@ -8,9 +8,11 @@ import { join } from 'node:path';
 
 const [output, given, host, devicelog] = process.argv.slice(2);
 const runs = join(homedir(), '.maestro/tests');
-const newest = (folder) =>
-  existsSync(folder) ? readdirSync(folder).map((name) => join(folder, name)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] : undefined;
-const run = given || newest(runs);
+const byAge = (folder) =>
+  existsSync(folder) ? readdirSync(folder).map((name) => join(folder, name)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs) : [];
+const newest = (folder) => byAge(folder)[0];
+// Each flow runs on its own: its records are in the newest run that has it.
+const runOf = (flow) => (given ? given : byAge(runs).find((run) => existsSync(join(run, flow))));
 
 // GitHub takes ten error annotations a step: three for the flows, the rest for each one's why.
 const notes = [];
@@ -26,14 +28,13 @@ for (const line of failed.slice(0, 3)) note('Maestro', line);
 // The device gone: whether it was still there, the host's memory and its killer, its last words.
 const lines = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8').split('\n').filter(Boolean) : []);
 const hostNotes = lines(host);
-if (hostNotes.length && !hostNotes[0].endsWith('device')) {
-  note('Device', hostNotes.join('\n'));
-  note('Device log, last', lines(devicelog).slice(-12).join('\n'));
-}
+if (hostNotes.length) note('Device', hostNotes.join('\n'));
+if (hostNotes.length && !hostNotes[0].endsWith(' device')) note('Device log, last', lines(devicelog).slice(-12).join('\n'));
 
 for (const line of failed) {
   const flow = line.match(/^\[Failed\] (\S+)/)?.[1];
-  const folder = run && flow ? join(run, flow) : undefined;
+  const run = flow && runOf(flow);
+  const folder = run ? join(run, flow) : undefined;
   if (!folder || !existsSync(folder)) continue;
   const log = join(folder, 'logs', 'maestro.log');
   const step = existsSync(log) ? readFileSync(log, 'utf8').split('\n').findLast((l) => l.includes('CommandFailed')) : undefined;
