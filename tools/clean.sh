@@ -1,11 +1,14 @@
 #!/bin/sh
 # Frees disk space: removes what builds and tests left behind – all of it made again by the build
 # scripts, the tests and the tools that made it. Only paths git ignores are touched in the
-# repository; outside it, only Xcode's build folder for the demo's workspace.
+# repository; outside it, only Xcode's build folder for the demo's workspace, and – when asked –
+# Shama's own test devices.
 #
 #   sh tools/clean.sh               builds and test leftovers
 #   sh tools/clean.sh --downloads   also the models and libraries fetched – checked again when fetched anew
 #   sh tools/clean.sh --all         also the downloads and node_modules
+#   sh tools/clean.sh --devices     also Shama's simulators ("Shama …") and emulators (shama_…), shut
+#                                   down first; other projects' devices stay
 #   sh tools/clean.sh -n [...]      lists what would go, with sizes, and removes nothing
 #
 # Kept always: the measuring corpus (.cache/corpus – voices paid for), the echo recordings and the
@@ -14,13 +17,14 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$(pwd)
 
-dry=0 downloads=0 deps=0
+dry=0 downloads=0 deps=0 devices=0
 for arg in "$@"; do
   case $arg in
     -n | --dry-run) dry=1 ;;
     --downloads) downloads=1 ;;
     --all) downloads=1 deps=1 ;;
-    *) echo "usage: sh tools/clean.sh [-n] [--downloads | --all]" >&2; exit 1 ;;
+    --devices) devices=1 ;;
+    *) echo "usage: sh tools/clean.sh [-n] [--downloads | --all] [--devices]" >&2; exit 1 ;;
   esac
 done
 
@@ -43,16 +47,30 @@ fetched='.cache/models .cache/device-models .cache/hosana-models .cache/sherpa-a
 
 modules='node_modules bindings/*/node_modules examples/*/node_modules'
 
+# An emulator running the AVD named: told to stop, and waited for.
+stop_emulator() {
+  command -v adb > /dev/null || return 0
+  for serial in $(adb devices 2> /dev/null | awk '/^emulator-/ { print $1 }'); do
+    [ "$(adb -s "$serial" emu avd name 2> /dev/null | head -1 | tr -d '\r')" = "$1" ] || continue
+    adb -s "$serial" emu kill > /dev/null 2>&1
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      adb devices | grep -q "^$serial" || break
+      sleep 2
+    done
+  done
+}
+
 patterns="$builds $leftovers"
 [ $downloads = 1 ] && patterns="$patterns $fetched"
 [ $deps = 1 ] && patterns="$patterns $modules"
 
 total=0
-remove() { # path, shown as
+remove() { # path, shown as, and how to remove it if not by deleting the path
   kb=$(du -sk "$1" 2> /dev/null | cut -f1)
   total=$((total + ${kb:-0}))
   printf '%9.1f MB  %s\n' "$(echo "${kb:-0} / 1024" | bc -l)" "$2"
-  [ $dry = 1 ] || rm -rf "$1"
+  [ $dry = 1 ] && return
+  if [ $# -gt 2 ]; then eval "$3"; else rm -rf "$1"; fi
 }
 
 for pattern in $patterns; do
@@ -73,6 +91,33 @@ if [ "$(uname)" = Darwin ]; then
     [ -f "$folder/info.plist" ] || continue
     workspace=$(/usr/libexec/PlistBuddy -c 'Print :WorkspacePath' "$folder/info.plist" 2> /dev/null || true)
     case $workspace in "$root"/*) remove "${folder%/}" "${folder%/} (Xcode, ${workspace#"$root"/})" ;; esac
+  done
+fi
+
+# Shama's own test devices, by their names: simulators "Shama …", Android emulators shama_….
+if [ $devices = 1 ]; then
+  newline='
+'
+  if [ "$(uname)" = Darwin ] && command -v xcrun > /dev/null; then
+    simulators=$(xcrun simctl list devices -j | node -e "
+      let json = '';
+      process.stdin.on('data', (d) => (json += d)).on('end', () => {
+        for (const list of Object.values(JSON.parse(json).devices))
+          for (const d of list) if (d.name.startsWith('Shama ')) console.log(d.udid + ' ' + d.name);
+      });")
+    IFS=$newline
+    for simulator in $simulators; do
+      udid=${simulator%% *}
+      remove "$HOME/Library/Developer/CoreSimulator/Devices/$udid" "simulator ${simulator#* } ($udid)" \
+        "xcrun simctl shutdown $udid > /dev/null 2>&1; xcrun simctl delete $udid"
+    done
+    unset IFS
+  fi
+  avds=${ANDROID_AVD_HOME:-$HOME/.android/avd}
+  for folder in "$avds"/shama_*.avd; do
+    [ -d "$folder" ] || continue
+    name=$(basename "$folder" .avd)
+    remove "$folder" "emulator $name" "stop_emulator $name; rm -rf '$folder' '$avds/$name.ini'"
   done
 fi
 

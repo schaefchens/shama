@@ -51,7 +51,7 @@ sh bindings/react-native/build.sh        # the core for iOS and Android, its bin
 sh bindings/web/build.sh                 # the core as WASM
 ```
 
-`npm run clean` frees the disk of what builds and tests left – about 15 GB after a round of everything; `-- --downloads` also removes the models and libraries fetched, `-- --all` also `node_modules`, `-- -n` only lists.
+`npm run clean` frees the disk of what builds and tests left – about 15 GB after a round of everything; `-- --downloads` also removes the models and libraries fetched, `-- --all` also `node_modules`, `-- --devices` Shama's own simulators and emulators, `-- -n` only lists.
 
 - **React Native:** `@schaefchens/shama-react-native` is an Expo module (Expo SDK 58, React Native 0.88, iOS 16.4, Android API 24); its config plugin takes the microphone's and the speech recognizer's usage texts. Not in Expo Go.
 - **Web:** `@schaefchens/shama-web` runs the core in a worker and needs a bundler that handles `new Worker(new URL(…, import.meta.url))` – Vite does.
