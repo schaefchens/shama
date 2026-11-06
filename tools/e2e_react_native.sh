@@ -40,9 +40,24 @@ reachable() {
   return 1
 }
 
+# A flow, run once more where the device went offline meanwhile – never for a failure of its own.
+run() {
+  out=$(mktemp)
+  reachable && maestro --device "$device" test examples/react-native/e2e/$1.yaml > "$out" 2>&1
+  status=$?
+  cat "$out"
+  if [ $status != 0 ] && grep -q "device offline" "$out"; then
+    echo "$1: the device went offline – once more"
+    reachable && maestro --device "$device" test examples/react-native/e2e/$1.yaml
+    status=$?
+  fi
+  rm -f "$out"
+  return $status
+}
+
 failed=0
 for flow in self-test recordings diagnostics; do
-  if reachable && maestro --device "$device" test examples/react-native/e2e/$flow.yaml; then
+  if run $flow; then
     echo "[Passed] $flow"
   else
     echo "[Failed] $flow"
