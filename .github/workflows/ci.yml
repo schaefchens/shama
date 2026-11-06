@@ -106,16 +106,20 @@ jobs:
           key: android-${{ hashFiles('package-lock.json', 'engines/sherpa/models.json') }}
       - run: cargo install cargo-ndk --locked --version 4.1.2
       - run: npm ci
+      # Where a build fails, tools/ci-step.sh puts its errors in the annotations.
       - name: The core for Android
-        run: ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ANDROID_ABIS=x86_64 sh bindings/react-native/build.sh android
-      - name: The demo as a release build
-        working-directory: examples/react-native
         run: |
-          npm run fixtures
-          npx expo prebuild -p android --no-install
-          cd android && ./gradlew app:assembleRelease -PreactNativeArchitectures=x86_64
+          sh tools/ci-step.sh "The core for Android" \
+            env ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ANDROID_ABIS=x86_64 sh bindings/react-native/build.sh android
+      - name: The demo as a release build
+        run: |
+          sh tools/ci-step.sh "The demo as a release build" sh -c '
+            cd examples/react-native &&
+            npm run fixtures &&
+            npx expo prebuild -p android --no-install &&
+            cd android && ./gradlew app:assembleRelease -PreactNativeArchitectures=x86_64'
           # The build's daemons would hold gigabytes the emulator needs.
-          ./gradlew --stop
+          (cd examples/react-native/android && ./gradlew --stop)
           pkill -f KotlinCompileDaemon || true
       - name: Maestro, checked
         run: |
