@@ -38,6 +38,7 @@ The app sets the mode, per request if it likes.
 ## What stays where
 
 - **Audio** never reaches JavaScript on native platforms, nor the page's main thread on the web; it is never written to disk or sent away, and buffers are zeroed after use.
+- **Debugging** is the app's choice, off by default: diagnostics tell numbers, never words. Kept audio – the last 8 utterances, in memory, zeroed when given up – is played natively, and written to a file only when the app saves one: the app's documents on iOS, its external files on Android, a download in a browser, whose page then holds it.
 - **What was heard** stays in native code or the worker. JavaScript gets the words only for a stage there – the app's resolvers, an external AI – or when the app asks for them to debug. The system's language model gets them natively; in a browser they pass through the page.
 - **Nothing is logged** of what was said; results carry timings and the stages' trail.
 

@@ -43,18 +43,76 @@ export interface ListenOptions {
   partial?: boolean;
   /** Hand what was heard to the app with every result – for debugging only. */
   transcripts?: boolean;
+  /** Tell where audio comes from, the meter in full and each utterance as it is cut. */
+  diagnostics?: boolean;
+  /** Keep the last utterances' audio, in memory, to be played back or saved – for debugging only. */
+  keepAudio?: boolean;
   /** Debug builds: audio from a WAV file instead of the microphone. */
   file?: string;
   /** Tests: a text settled as if it had been heard, without audio. */
   text?: string;
 }
 
+/** Where audio comes from, as the platform tells it. */
+export interface InputInfo {
+  /** The microphone as the system names it – or "file". */
+  device: string;
+  kind: 'builtIn' | 'wired' | 'bluetooth' | 'usb' | 'file' | 'other';
+  /** The rate audio comes at, before Shama resamples it to 16 kHz. */
+  rate: number;
+  channels: number;
+  /** How the system was asked to treat it: the audio session's mode, the recording source, the constraints. */
+  processing: string;
+  echoCancellation: boolean;
+  /** Anything more the platform tells: latency, gain, the output route… */
+  details?: Record<string, string | number | boolean>;
+}
+
+/** The microphone as Shama's endpointer hears it, about 17 times a second. */
+export interface Meter {
+  /** 0 to 1, for -60 to 0 dBFS. */
+  level: number;
+  rmsDb: number;
+  /** The loudest sample since the last meter; whether it was at full scale. */
+  peakDb: number;
+  clipped: boolean;
+  /** The room's noise floor, and the loudness above it that counts as speech. */
+  floorDb: number;
+  thresholdDb: number;
+  phase: 'settling' | 'waiting' | 'speaking' | 'done';
+}
+
+/** What ended an utterance: a pause, its length, the talk button let go, the audio's end. */
+export type Cut = 'pause' | 'long' | 'release' | 'end';
+
+/** An utterance as the endpointer cut it, before it is recognized; `kept`: its audio is kept. */
+export interface UtteranceCut {
+  id: number;
+  startMs: number;
+  endMs: number;
+  speechMs: number;
+  cut: Cut;
+  kept: boolean;
+}
+
+/** A recording saved: where it is – a file on a device, a link in a browser – and its name. */
+export interface SavedRecording {
+  uri: string;
+  name: string;
+}
+
 export type PortEvent =
   | { event: 'level'; level: number }
+  /** With diagnostics, in place of the level. */
+  | ({ event: 'meter' } & Meter)
+  /** With diagnostics: where audio comes from, when listening starts and when its route changes. */
+  | { event: 'input'; input: InputInfo }
   | { event: 'speech' }
+  /** With diagnostics: an utterance cut, before it is recognized. */
+  | ({ event: 'utterance' } & UtteranceCut)
   | { event: 'recognizing' }
-  | { event: 'settled'; id: number; recognizer: string; speechMs: number; settled: Settled; heard?: Hypothesis[] }
-  | { event: 'tooShort' }
+  | { event: 'settled'; id: number; recognizer: string; speechMs: number; recognizeMs?: number; settled: Settled; heard?: Hypothesis[] }
+  | { event: 'tooShort'; speechMs?: number }
   | { event: 'nothingHeard' }
   | { event: 'done' }
   | { event: 'failed'; message: string }
@@ -103,6 +161,13 @@ export interface Port {
   deviceAi(id: number, options: AiOptions & { timeoutMs: number }): Promise<AiReply>;
   /** Rejects with a `Why` when the reply doesn't hold up. */
   checkReply(reply: AiReply, options: { live: boolean; maxCalls: number; replyChars: number }): Promise<Checked>;
+  /** Plays an utterance's kept audio; resolves when it has played. */
+  playRecording(id: number): Promise<void>;
+  stopPlaying(): void;
+  /** Saves an utterance's kept audio as a WAV: a file in the app's storage, a link in a browser. */
+  saveRecording(id: number): Promise<SavedRecording>;
+  /** Wipes the kept audio. */
+  forgetRecordings(): void;
   /** Shama's own voice, for its replies in LIVE; resolves when it has spoken. */
   speak(text: string, language: Language): Promise<void>;
   stopSpeaking(): void;

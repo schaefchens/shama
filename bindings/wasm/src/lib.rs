@@ -38,8 +38,13 @@ impl Recognizer for JsRecognizer {
 }
 
 #[wasm_bindgen]
-#[derive(Default)]
 pub struct Core(Host);
+
+impl Default for Core {
+    fn default() -> Self {
+        Core::new()
+    }
+}
 
 fn error(message: String) -> JsError {
     JsError::new(&message)
@@ -47,9 +52,10 @@ fn error(message: String) -> JsError {
 
 #[wasm_bindgen]
 impl Core {
+    /// Recognizers timed by the worker's clock: WASM has none of its own.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Core {
-        Core(Host::new())
+        Core(Host::with_clock(js_sys::Date::now))
     }
 
     /// Compiles a vocabulary: its problems as JSON, `[]` when it is good.
@@ -112,6 +118,24 @@ impl Core {
 
     pub fn forget(&mut self, id: u32) {
         self.0.forget(id.into());
+    }
+
+    /// An utterance's audio kept for debugging, as a WAV file – 16 kHz, 16-bit.
+    #[wasm_bindgen(js_name = recordingWav)]
+    pub fn recording_wav(&self, id: u32) -> Option<Vec<u8>> {
+        self.0.recording_wav(id.into())
+    }
+
+    /// An utterance's audio kept for debugging: 16 kHz samples.
+    #[wasm_bindgen(js_name = recordingAudio)]
+    pub fn recording_audio(&self, id: u32) -> Option<Vec<f32>> {
+        self.0.recording(id.into()).map(|recording| recording.audio().to_vec())
+    }
+
+    /// Wipes the audio kept for debugging.
+    #[wasm_bindgen(js_name = forgetRecordings)]
+    pub fn forget_recordings(&mut self) {
+        self.0.forget_recordings();
     }
 
     /// A call made complete for the moment the app is in.

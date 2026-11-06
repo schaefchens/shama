@@ -3,7 +3,7 @@
 
 import { requireNativeModule } from 'expo';
 import { AiError, createShama } from '@schaefchens/shama';
-import type { AiOptions, Checked, LanguageSupport, Port, PortEvent, Shama, Why } from '@schaefchens/shama';
+import type { AiOptions, Checked, LanguageSupport, Port, PortEvent, SavedRecording, Shama, Why } from '@schaefchens/shama';
 
 interface NativeShama {
   configure(models: Record<string, string>): Promise<LanguageSupport[]>;
@@ -15,6 +15,10 @@ interface NativeShama {
   stop(): Promise<void>;
   heard(id: number): Promise<string | null>;
   forget(id: number): void;
+  playRecording(id: number): Promise<void>;
+  stopPlaying(): void;
+  saveRecording(id: number): Promise<SavedRecording>;
+  forgetRecordings(): void;
   finishCall(call: string): Promise<string>;
   aiRequest(id: number, options: string): Promise<string | null>;
   checkReply(reply: string, options: string): Promise<string>;
@@ -48,6 +52,10 @@ export function createNativePort(): Port {
     stop: () => native.stop(),
     heard: async (id) => parse(await native.heard(id)),
     forget: (id) => native.forget(id),
+    playRecording: (id) => native.playRecording(id),
+    stopPlaying: () => native.stopPlaying(),
+    saveRecording: (id) => native.saveRecording(id),
+    forgetRecordings: () => native.forgetRecordings(),
     finish: async (call) => JSON.parse(await native.finishCall(JSON.stringify(call))),
     aiRequest: async (id, options) => parse(await native.aiRequest(id, aiOptions(options))),
     deviceAiAvailable: (language) => native.deviceAiAvailable(language),

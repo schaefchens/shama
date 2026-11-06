@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import androidx.core.content.ContextCompat
 import de.schaefchens.shama.core.ShamaCore
 import expo.modules.interfaces.permissions.PermissionsResponse
@@ -15,6 +16,10 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -27,6 +32,7 @@ class ShamaModule : Module() {
   private val executor = Executors.newSingleThreadExecutor { Thread(it, "shama") }
   private val core by lazy { ShamaCore() }
   private val speaker by lazy { Speaker(context) }
+  private val playback = Playback()
   private var capture: Capture? = null
   @Volatile private var held = false
   /** The languages the app's embedded models hear. */
@@ -98,6 +104,29 @@ class ShamaModule : Module() {
     AsyncFunction("heard") { id: Int -> onQueue { core.heard(utterance(id)) } }
 
     Function("forget") { id: Int -> executor.execute { core.forget(utterance(id)) } }
+
+    // Utterances' audio kept for debugging: played here, saved to the app's files – never to JS.
+    AsyncFunction("playRecording") { id: Int, promise: Promise ->
+      val pcm = onQueue { core.recordingPcm16(utterance(id)) }
+        ?: return@AsyncFunction promise.reject(CodedException("NoRecording", "no audio kept for utterance $id", null))
+      playback.play(pcm) { promise.resolve(null) }
+    }
+
+    Function("stopPlaying") { playback.stop() }
+
+    AsyncFunction("saveRecording") { id: Int ->
+      val wav = onQueue { core.recordingWav(utterance(id)) }
+        ?: throw CodedException("NoRecording", "no audio kept for utterance $id", null)
+      // The app's external files, where adb reaches them; its own where there are none.
+      val folder = File(context.getExternalFilesDir(null) ?: context.filesDir, "shama-recordings").apply { mkdirs() }
+      val name = "shama-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())}-$id.wav"
+      val file = File(folder, name)
+      file.writeBytes(wav)
+      wav.fill(0)
+      mapOf("uri" to Uri.fromFile(file).toString(), "name" to name)
+    }
+
+    Function("forgetRecordings") { executor.execute { core.forgetRecordings() } }
 
     AsyncFunction("finishCall") { call: String -> onQueue { core.finishCall(call) } }
 
@@ -181,12 +210,17 @@ class ShamaModule : Module() {
       stopCapture()
       emit(JSONObject().put("event", "interrupted").put("reason", reason))
     }
+    val diagnostics = options.optBoolean("diagnostics")
+    if (diagnostics) {
+      capture.onRouteChange = { emit(JSONObject().put("event", "input").put("input", JSONObject(capture.input()))) }
+    }
     onQueue {
       held = false
       core.listen(listenJson, Capture.RATE_UNSIGNED, recognizer)
     }
     capture.start()
     this.capture = capture
+    if (diagnostics) emit(JSONObject().put("event", "input").put("input", JSONObject(capture.input())))
     if (live) emit(JSONObject().put("event", "echoCancellation").put("available", capture.echoCancelled))
   }
 

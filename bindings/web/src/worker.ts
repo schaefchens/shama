@@ -49,9 +49,11 @@ async function handle(method: string, args: unknown[]): Promise<unknown> {
       c.setTurn(args[0] as string);
       return null;
     case 'listen': {
-      if (!engine) throw new Error('no recognizer for the microphone here: configure an embedded engine');
       const [options, rate, port] = args as [string, number, MessagePort];
-      c.listen(options, rate, engine.name, recognize);
+      // Without a recognizer, the microphone still opens for diagnostics: utterances are cut, and fail.
+      const diagnosing = (JSON.parse(options) as { diagnostics?: boolean }).diagnostics === true;
+      if (!engine && !diagnosing) throw new Error('no recognizer for the microphone here: configure an embedded engine');
+      c.listen(options, rate, engine?.name ?? 'none', recognize);
       held = false;
       audio = port;
       audio.onmessage = (message: MessageEvent<Float32Array>) => {
@@ -89,6 +91,13 @@ async function handle(method: string, args: unknown[]): Promise<unknown> {
       return c.heard(args[0] as number) ?? null;
     case 'forget':
       c.forget(args[0] as number);
+      return null;
+    case 'recordingAudio':
+      return c.recordingAudio(args[0] as number) ?? null;
+    case 'recordingWav':
+      return c.recordingWav(args[0] as number) ?? null;
+    case 'forgetRecordings':
+      c.forgetRecordings();
       return null;
     case 'finishCall':
       return c.finishCall(args[0] as string);

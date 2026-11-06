@@ -35,6 +35,15 @@ export function createNodePort(): Port {
     stop: async () => core.stop(),
     heard: async (id) => JSON.parse(core.heard(id) ?? 'null'),
     forget: (id) => core.forget(id),
+    // No speakers in Node; a saved recording comes back as a data URL.
+    playRecording: async () => {},
+    stopPlaying: () => {},
+    async saveRecording(id) {
+      const wav = core.recordingWav(id);
+      if (!wav) throw new Error(`no audio kept for utterance ${id}`);
+      return { uri: `data:audio/wav;base64,${Buffer.from(wav).toString('base64')}`, name: `shama-${id}.wav` };
+    },
+    forgetRecordings: () => core.forgetRecordings(),
     finish: async (call) => JSON.parse(core.finishCall(JSON.stringify(call))),
     aiRequest: async (id, options) => JSON.parse(core.aiRequest(id, JSON.stringify(options)) ?? 'null'),
     deviceAiAvailable: async () => false,

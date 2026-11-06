@@ -222,6 +222,21 @@ impl ShamaCore {
         self.host().forget(id.into());
     }
 
+    /// An utterance's audio kept for debugging, as a WAV file – 16 kHz, 16-bit.
+    pub fn recording_wav(&self, id: u32) -> Option<Vec<u8>> {
+        self.host().recording_wav(id.into())
+    }
+
+    /// An utterance's audio kept for debugging, as 16 kHz, 16-bit little-endian PCM.
+    pub fn recording_pcm16(&self, id: u32) -> Option<Vec<u8>> {
+        self.host().recording(id.into()).map(|recording| pcm16(recording.audio()))
+    }
+
+    /// Wipes the audio kept for debugging.
+    pub fn forget_recordings(&self) {
+        self.host().forget_recordings();
+    }
+
     /// A call made complete for the moment the app is in: an outcome as JSON.
     pub fn finish_call(&self, call: String) -> Result<String, CoreError> {
         self.host().finish_call(&call).map_err(CoreError::Invalid)

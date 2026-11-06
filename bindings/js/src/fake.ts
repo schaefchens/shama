@@ -2,7 +2,7 @@
 // the pipeline does with what the device settled.
 
 import { AiError } from './ai.ts';
-import type { ListenOptions, LanguageSupport, Port, PortEvent } from './port.ts';
+import type { ListenOptions, LanguageSupport, Port, PortEvent, SavedRecording } from './port.ts';
 import type { AiReply, AiRequest, Call, Checked, Hypothesis, Outcome, Problem, Settled, Turn, Vocabulary } from './types.ts';
 
 export interface FakePortOptions {
@@ -124,6 +124,23 @@ export class FakePort implements Port {
     }
     const calls = reply.calls.map((call) => ({ tool: call.tool, args: call.args as Call['args'] }));
     return { outcome: { kind: 'call', calls }, reply: text };
+  }
+
+  async playRecording(id: number): Promise<void> {
+    this.log.push(`play:${id}`);
+  }
+
+  stopPlaying(): void {
+    this.log.push('stopPlaying');
+  }
+
+  async saveRecording(id: number): Promise<SavedRecording> {
+    this.log.push(`save:${id}`);
+    return { uri: `file:///recordings/${id}.wav`, name: `${id}.wav` };
+  }
+
+  forgetRecordings(): void {
+    this.log.push('forgetRecordings');
   }
 
   async speak(text: string): Promise<void> {

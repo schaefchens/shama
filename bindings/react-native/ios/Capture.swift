@@ -14,6 +14,8 @@ final class Capture {
   private var saved: (category: AVAudioSession.Category, mode: AVAudioSession.Mode, options: AVAudioSession.CategoryOptions)?
   private var observers: [NSObjectProtocol] = []
   var onInterrupted: ((String) -> Void)?
+  /// The route changed: another microphone, headphones plugged in or out.
+  var onRouteChange: (() -> Void)?
   private(set) var rate: Double = 48_000
   private(set) var echoCancelled = false
 
@@ -64,8 +66,55 @@ final class Capture {
     observers.append(center.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: nil) { [weak self] _ in
       self?.onInterrupted?("mediaServicesReset")
     })
+    observers.append(center.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: nil) { [weak self] _ in
+      self?.onRouteChange?()
+    })
     engine.prepare()
     try engine.start()
+  }
+
+  /// The microphone as the session tells of it, for diagnostics.
+  func input() -> [String: Any] {
+    let session = AVAudioSession.sharedInstance()
+    let port = session.currentRoute.inputs.first
+    let format = engine.inputNode.outputFormat(forBus: 0)
+    var details: [String: Any] = [
+      "session rate": Int(session.sampleRate),
+      "input latency ms": Int((session.inputLatency * 1000).rounded()),
+      "buffer ms": Int((session.ioBufferDuration * 1000).rounded()),
+      "input gain": (Double(session.inputGain) * 100).rounded() / 100,
+      "gain settable": session.isInputGainSettable,
+      "voice processing": engine.inputNode.isVoiceProcessingEnabled,
+      "output": session.currentRoute.outputs.map(\.portName).joined(separator: ", "),
+      "inputs available": (session.availableInputs ?? []).map(\.portName).joined(separator: ", "),
+    ]
+    if let source = session.inputDataSource {
+      details["data source"] = source.dataSourceName
+      if let pattern = source.selectedPolarPattern { details["polar pattern"] = pattern.rawValue }
+    }
+    if #available(iOS 18.2, *) {
+      details["echo-cancelled input available"] = session.isEchoCancelledInputAvailable
+    }
+    let name = { (raw: String, prefix: String) in raw.hasPrefix(prefix) ? String(raw.dropFirst(prefix.count)) : raw }
+    return [
+      "device": port?.portName ?? "microphone",
+      "kind": Capture.kind(port?.portType),
+      "rate": Int(format.sampleRate),
+      "channels": Int(format.channelCount),
+      "processing": "\(name(session.category.rawValue, "AVAudioSessionCategory")) · \(name(session.mode.rawValue, "AVAudioSessionMode"))",
+      "echoCancellation": echoCancelled,
+      "details": details,
+    ]
+  }
+
+  private static func kind(_ type: AVAudioSession.Port?) -> String {
+    switch type {
+    case .builtInMic?: return "builtIn"
+    case .headsetMic?, .lineIn?: return "wired"
+    case .bluetoothHFP?: return "bluetooth"
+    case .usbAudio?: return "usb"
+    default: return "other"
+    }
   }
 
   /// Stops listening and gives the session back as it was found, letting others play on.

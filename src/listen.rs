@@ -11,8 +11,12 @@ const FRAME_MS: u32 = 20;
 const FLOOR_FRAMES: usize = 75;
 /// Loud frames in a row that begin speech.
 const START_FRAMES: u32 = 3;
-/// A level event every this many frames: about 17 a second.
+/// A meter event every this many frames: about 17 a second.
 const LEVEL_EVERY: u64 = 3;
+/// Loudness at least this, in RMS, counts as speech – above a quiet room's floor.
+const MIN_LOUD: f32 = 0.012;
+/// A sample this loud was likely cut off at full scale.
+const CLIPPED: f32 = 0.98;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,6 +64,20 @@ impl Endpointing {
     }
 }
 
+/// What ended an utterance.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Cut {
+    /// A pause after speech.
+    Pause,
+    /// Speech longer than an utterance may be.
+    Long,
+    /// The talk button let go.
+    Release,
+    /// The audio ended – a file read through.
+    End,
+}
+
 /// An utterance's audio, at 16 kHz, kept in memory only and wiped when dropped.
 #[derive(Debug, PartialEq)]
 pub struct Utterance {
@@ -67,12 +85,13 @@ pub struct Utterance {
     pub start_ms: u64,
     pub end_ms: u64,
     pub speech_ms: u32,
+    pub cut: Cut,
 }
 
 impl Utterance {
     pub fn new(audio: Vec<f32>, start_ms: u64, speech_ms: u32) -> Utterance {
         let end_ms = start_ms + audio.len() as u64 * 1000 / crate::resample::RATE as u64;
-        Utterance { audio, start_ms, end_ms, speech_ms }
+        Utterance { audio, start_ms, end_ms, speech_ms, cut: Cut::End }
     }
 
     pub fn audio(&self) -> &[f32] {
@@ -86,14 +105,45 @@ impl Drop for Utterance {
     }
 }
 
+/// Where the endpointer is: learning the room, waiting for speech, in it, or through.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Phase {
+    Settling,
+    Waiting,
+    Speaking,
+    Done,
+}
+
+/// The microphone as the endpointer hears it, about 17 times a second.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Meter {
+    /// The level, 0 to 1 for -60 to 0 dBFS, for the app to show.
+    pub level: f32,
+    /// The loudness since the last meter, in dBFS.
+    pub rms_db: f32,
+    /// The loudest sample since the last meter, in dBFS; whether it was at full scale.
+    pub peak_db: f32,
+    pub clipped: bool,
+    /// The room's noise floor, and the loudness above it that counts as speech, in dBFS.
+    pub floor_db: f32,
+    pub threshold_db: f32,
+    pub phase: Phase,
+}
+
+/// Decibels relative to full scale.
+pub fn dbfs(amplitude: f32) -> f32 {
+    20.0 * amplitude.max(1e-6).log10()
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Endpoint {
-    /// The microphone's level, 0 to 1, for the app to show.
-    Level(f32),
+    Level(Meter),
     SpeechStarted,
     Utterance(Utterance),
-    /// Sound too short to be speech – a click, a knock – dropped.
-    TooShort,
+    /// Sound too short to be speech – a click, a knock – dropped; how long it was loud.
+    TooShort(u32),
     NothingHeard,
     /// The turn is over: push-to-talk takes no more audio.
     Done,
@@ -111,6 +161,10 @@ pub struct Endpointer {
     /// When the turn began or the last utterance ended, for "nothing heard".
     since: u64,
     heard_any: bool,
+    /// The energy since the last meter, and over how many samples.
+    energy: f32,
+    energy_samples: usize,
+    peak: f32,
 }
 
 enum State {
@@ -131,6 +185,9 @@ impl Endpointer {
             state: State::Waiting { loud_run: 0 },
             since: 0,
             heard_any: false,
+            energy: 0.0,
+            energy_samples: 0,
+            peak: 0.0,
         }
     }
 
@@ -158,7 +215,7 @@ impl Endpointer {
     pub fn release(&mut self) -> Vec<Endpoint> {
         let mut events = Vec::new();
         match self.state {
-            State::Speaking { .. } => self.end(&mut events),
+            State::Speaking { .. } => self.end(Cut::Release, &mut events),
             State::Waiting { .. } => {
                 if !self.heard_any {
                     events.push(Endpoint::NothingHeard);
@@ -174,7 +231,7 @@ impl Endpointer {
     pub fn finish(&mut self) -> Vec<Endpoint> {
         let mut events = Vec::new();
         if let State::Speaking { .. } = self.state {
-            self.end(&mut events);
+            self.end(Cut::End, &mut events);
         }
         if !self.is_done() {
             self.done(&mut events);
@@ -199,14 +256,50 @@ impl Endpointer {
         levels[levels.len() / 5].max(0.0005)
     }
 
-    fn process(&mut self, frame: &[f32], events: &mut Vec<Endpoint>) {
-        let rms = (frame.iter().map(|s| s * s).sum::<f32>() / frame.len() as f32).sqrt();
-        self.frames += 1;
-        let now_ms = self.frames * FRAME_MS as u64;
-        if self.frames.is_multiple_of(LEVEL_EVERY) {
-            let decibels = 20.0 * rms.max(1e-6).log10();
-            events.push(Endpoint::Level(((decibels + 60.0) / 60.0).clamp(0.0, 1.0)));
+    /// The loudness that counts as speech: well above the room's floor.
+    fn threshold(&self) -> f32 {
+        (3.0 * self.floor()).max(MIN_LOUD)
+    }
+
+    /// The meter, every few frames: the loudness since the last, and where the endpointer is.
+    fn meter(&mut self, events: &mut Vec<Endpoint>) {
+        if !self.frames.is_multiple_of(LEVEL_EVERY) || self.energy_samples == 0 {
+            return;
         }
+        let rms_db = dbfs((self.energy / self.energy_samples as f32).sqrt());
+        let peak = std::mem::take(&mut self.peak);
+        self.energy = 0.0;
+        self.energy_samples = 0;
+        let phase = match self.state {
+            _ if self.frames * (FRAME_MS as u64) <= self.settings.settle_ms as u64 => Phase::Settling,
+            State::Waiting { .. } => Phase::Waiting,
+            State::Speaking { .. } => Phase::Speaking,
+            State::Done => Phase::Done,
+        };
+        events.push(Endpoint::Level(Meter {
+            level: ((rms_db + 60.0) / 60.0).clamp(0.0, 1.0),
+            rms_db,
+            peak_db: dbfs(peak),
+            clipped: peak >= CLIPPED,
+            floor_db: dbfs(self.floor()),
+            threshold_db: dbfs(self.threshold()),
+            phase,
+        }));
+    }
+
+    fn process(&mut self, frame: &[f32], events: &mut Vec<Endpoint>) {
+        let energy = frame.iter().map(|s| s * s).sum::<f32>();
+        let rms = (energy / frame.len() as f32).sqrt();
+        self.energy += energy;
+        self.energy_samples += frame.len();
+        self.peak = frame.iter().fold(self.peak, |peak, s| peak.max(s.abs()));
+        self.frames += 1;
+        self.step(frame, rms, events);
+        self.meter(events);
+    }
+
+    fn step(&mut self, frame: &[f32], rms: f32, events: &mut Vec<Endpoint>) {
+        let now_ms = self.frames * FRAME_MS as u64;
         let pre_roll = (self.settings.pre_roll_ms / FRAME_MS) as usize * FRAME + START_FRAMES as usize * FRAME;
         self.recent.extend(frame.iter().copied());
         while self.recent.len() > pre_roll {
@@ -216,8 +309,7 @@ impl Endpointer {
             self.learn(rms);
             return;
         }
-        let floor = self.floor();
-        let loud = rms > (3.0 * floor).max(0.012);
+        let loud = rms > self.threshold();
         match &mut self.state {
             State::Waiting { loud_run } => {
                 if loud {
@@ -257,7 +349,7 @@ impl Endpointer {
                     (audio.len() as u64 * 1000 / crate::resample::RATE as u64) >= self.settings.max_utterance_ms as u64;
                 let paused = self.mode != Mode::Hold && *quiet_run * FRAME_MS >= self.settings.end_pause_ms;
                 if long || paused {
-                    self.end(events);
+                    self.end(if long { Cut::Long } else { Cut::Pause }, events);
                     if self.mode == Mode::Tap && matches!(events.last(), Some(Endpoint::Utterance(_))) {
                         self.done(events);
                     }
@@ -276,7 +368,7 @@ impl Endpointer {
     }
 
     /// Ends the utterance being spoken: kept if it was speech long enough, else dropped.
-    fn end(&mut self, events: &mut Vec<Endpoint>) {
+    fn end(&mut self, cut: Cut, events: &mut Vec<Endpoint>) {
         let state = std::mem::replace(&mut self.state, State::Waiting { loud_run: 0 });
         let State::Speaking { mut audio, start_ms, loud_frames, last_loud_end, .. } = state else {
             self.state = state;
@@ -286,14 +378,16 @@ impl Endpointer {
         let speech_ms = loud_frames * FRAME_MS;
         if speech_ms < self.settings.min_speech_ms {
             audio.fill(0.0);
-            events.push(Endpoint::TooShort);
+            events.push(Endpoint::TooShort(speech_ms));
             return;
         }
         let post_roll = (self.settings.post_roll_ms as usize) * crate::resample::RATE as usize / 1000;
         let keep = (last_loud_end + post_roll).min(audio.len());
         audio[keep..].fill(0.0);
         audio.truncate(keep);
-        events.push(Endpoint::Utterance(Utterance::new(audio, start_ms, speech_ms)));
+        let mut utterance = Utterance::new(audio, start_ms, speech_ms);
+        utterance.cut = cut;
+        events.push(Endpoint::Utterance(utterance));
     }
 }
 
@@ -311,7 +405,7 @@ pub(crate) mod tests {
             .collect()
     }
 
-    /// Something voice-like: a low tone with overtones, at about -23 dBFS.
+    /// Something voice-like: a low tone with overtones, peaking at about -23 dBFS (-27 RMS).
     pub fn voice(ms: u32) -> Vec<f32> {
         (0..ms * 16)
             .map(|i| {
@@ -336,6 +430,16 @@ pub(crate) mod tests {
         events.extend(endpointer.finish());
         events.retain(|event| !matches!(event, Endpoint::Level(_)));
         events
+    }
+
+    fn cuts(events: &[Endpoint]) -> Vec<Cut> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                Endpoint::Utterance(u) => Some(u.cut),
+                _ => None,
+            })
+            .collect()
     }
 
     fn utterances(events: &[Endpoint]) -> Vec<(u64, u64, u32)> {
@@ -364,7 +468,7 @@ pub(crate) mod tests {
     #[test]
     fn a_click_is_not_speech() {
         let events = run(Mode::Tap, Endpointing::default(), &[(false, 500), (true, 80), (false, 1200)]);
-        assert!(events.contains(&Endpoint::TooShort), "{events:?}");
+        assert!(events.iter().any(|e| matches!(e, Endpoint::TooShort(60..=100))), "{events:?}");
         assert!(utterances(&events).is_empty());
     }
 
@@ -395,6 +499,52 @@ pub(crate) mod tests {
         let found = utterances(&events);
         assert_eq!(found.len(), 1);
         assert!((850..=950).contains(&found[0].2), "{} ms of speech", found[0].2);
+    }
+
+    #[test]
+    fn the_meter_shows_the_room_and_the_voice() {
+        let mut seed = 5;
+        let mut endpointer = Endpointer::new(Mode::Tap, Endpointing::default());
+        let mut meters = Vec::new();
+        for part in [hiss(1000, &mut seed), voice(600)] {
+            for event in endpointer.push(&part) {
+                if let Endpoint::Level(meter) = event {
+                    meters.push(meter);
+                }
+            }
+        }
+        // About 17 a second.
+        assert!((25..=28).contains(&meters.len()), "{} meters", meters.len());
+        assert_eq!(meters[0].phase, Phase::Settling);
+        let room = meters[meters.len() / 2 - 1];
+        assert_eq!(room.phase, Phase::Waiting);
+        // The hiss: about -61 dBFS; speech counts from -38.4 dBFS, the floor being far below.
+        assert!((-64.0..-58.0).contains(&room.rms_db), "{room:?}");
+        assert!(room.floor_db < room.rms_db + 3.0 && room.floor_db > -70.0, "{room:?}");
+        assert!((room.threshold_db - dbfs(MIN_LOUD)).abs() < 0.01, "{room:?}");
+        let speech = meters.last().unwrap();
+        assert_eq!(speech.phase, Phase::Speaking);
+        assert!((-29.0..-25.0).contains(&speech.rms_db), "{speech:?}");
+        assert!(speech.level > room.level);
+        assert!((-25.0..-21.0).contains(&speech.peak_db) && !speech.clipped, "{speech:?}");
+        let loud: Vec<f32> = voice(200).iter().map(|s| (s * 20.0).clamp(-1.0, 1.0)).collect();
+        let clipped =
+            endpointer.push(&loud).into_iter().any(|e| matches!(e, Endpoint::Level(Meter { clipped: true, .. })));
+        assert!(clipped);
+    }
+
+    #[test]
+    fn what_ended_each_utterance() {
+        let events = run(Mode::Tap, Endpointing::default(), &[(false, 500), (true, 1000), (false, 1500)]);
+        assert_eq!(cuts(&events), [Cut::Pause]);
+        let settings = Endpointing { max_utterance_ms: 3000, ..Endpointing::default() };
+        let events = run(Mode::Continuous, settings, &[(false, 500), (true, 4000)]);
+        assert_eq!(cuts(&events), [Cut::Long, Cut::End]);
+        let mut endpointer = Endpointer::new(Mode::Hold, Endpointing::default());
+        let mut seed = 1;
+        endpointer.push(&hiss(500, &mut seed));
+        endpointer.push(&voice(500));
+        assert_eq!(cuts(&endpointer.release()), [Cut::Release]);
     }
 
     #[test]

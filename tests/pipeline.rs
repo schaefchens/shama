@@ -2,6 +2,7 @@
 //! utterances, recognized by the fixture recognizer from the file's transcripts, and settled.
 
 use shama::engine::FixtureRecognizer;
+use shama::host::Host;
 use shama::listen::{Endpointing, Mode};
 use shama::wav::{self, Transcript, Wav};
 use shama::{
@@ -64,6 +65,7 @@ fn listener(wav: &Wav, mode: Mode, language: Language, transcripts: bool) -> Lis
         input_rate: wav.rate,
         settle: SettleOptions { partial: mode != Mode::Continuous, ..SettleOptions::default() },
         transcripts,
+        ..ListenerOptions::default()
     };
     Listener::new(compiled(), Box::new(FixtureRecognizer::new(wav.transcripts.clone())), turn(language), options)
 }
@@ -163,6 +165,7 @@ fn events_as_json() {
         id: 1,
         recognizer: "fixture".into(),
         speech_ms: 900,
+        recognize_ms: 12,
         settled: shama::Settled {
             outcome: Some(Outcome::StopListening),
             stage: Some(shama::Stage::Deterministic),
@@ -173,8 +176,58 @@ fn events_as_json() {
     assert_eq!(
         serde_json::to_value(&event).unwrap(),
         serde_json::json!({
-            "event": "settled", "id": 1, "recognizer": "fixture", "speechMs": 900,
+            "event": "settled", "id": 1, "recognizer": "fixture", "speechMs": 900, "recognizeMs": 12,
             "settled": { "outcome": { "kind": "stopListening" }, "stage": "deterministic", "trail": [] }
         })
     );
+}
+
+/// For debugging: where the audio came from, the meter in full, each utterance as it was cut – and
+/// its audio kept, across listening, to be played back or saved as a WAV that is heard again.
+#[test]
+fn diagnostics_and_kept_audio() {
+    let vocabulary = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/vocabulary.json"));
+    let mut host = Host::new();
+    assert_eq!(host.set_vocabulary(&vocabulary.unwrap()), "[]");
+    let wav = wav::write(&recording(&[
+        (500, None),
+        (900, Some("read Faust")),
+        (1200, None),
+        (600, Some("stop")),
+        (300, None),
+    ]));
+    let options = r#"{"mode":"continuous","language":"en","diagnostics":true,"keepAudio":true,"transcripts":true}"#;
+    let events: Vec<serde_json::Value> = serde_json::from_str(&host.listen_wav(options, &wav, None).unwrap()).unwrap();
+    let named = |name: &str| events.iter().filter(|e| e["event"] == name).collect::<Vec<_>>();
+    assert_eq!(named("input")[0]["input"]["kind"], "file");
+    assert_eq!(named("input")[0]["input"]["rate"], RATE);
+    assert!(named("level").is_empty());
+    let meters = named("meter");
+    assert!(meters.len() > 40 && meters.iter().any(|m| m["phase"] == "speaking"), "{} meters", meters.len());
+    let utterances = named("utterance");
+    assert_eq!(utterances.len(), 2);
+    assert_eq!((utterances[0]["cut"].as_str(), utterances[1]["cut"].as_str()), (Some("pause"), Some("end")));
+    assert!(utterances.iter().all(|u| u["kept"] == true));
+    let settled = named("settled");
+    assert_eq!(settled[0]["id"], utterances[0]["id"]);
+    assert!(settled[0]["recognizeMs"].is_u64());
+
+    // Kept after listening ends, ids going on; the WAV says what was heard in it.
+    host.stop();
+    let first = utterances[0]["id"].as_u64().unwrap();
+    let saved = wav::read(&host.recording_wav(first).unwrap()).unwrap();
+    assert_eq!(saved.rate, 16_000);
+    assert_eq!(saved.transcripts[0].text, "read Faust");
+    assert!((1200..1700).contains(&(saved.samples.len() * 1000 / 16_000)), "{} samples", saved.samples.len());
+    let again: Vec<serde_json::Value> = serde_json::from_str(&host.listen_wav(options, &wav, None).unwrap()).unwrap();
+    let ids: Vec<u64> = again.iter().filter(|e| e["event"] == "utterance").map(|e| e["id"].as_u64().unwrap()).collect();
+    assert_eq!(ids, [first + 2, first + 3]);
+    assert!(host.recording(first).is_some(), "eight are kept");
+
+    // Listening without keeping audio wipes what was kept; without diagnostics, a level only.
+    let plain = r#"{"mode":"continuous","language":"en"}"#;
+    let events: Vec<serde_json::Value> = serde_json::from_str(&host.listen_wav(plain, &wav, None).unwrap()).unwrap();
+    assert!(host.recording(first).is_none() && host.recording(first + 3).is_none());
+    assert!(events.iter().any(|e| e["event"] == "level"));
+    assert!(!events.iter().any(|e| ["meter", "utterance", "input"].contains(&e["event"].as_str().unwrap())));
 }

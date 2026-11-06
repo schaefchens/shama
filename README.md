@@ -82,9 +82,10 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 - **AI:** `shama.setAi({ brief, device: true, external: anthropic({ client, model: 'claude-opus-5-5' }) })` and `shama.setMode('online')`.
 - **Your own stage 2:** `shama.addResolver(({ heard }) => search(heard[0].text))`.
 - **Your tests:** `createNodeShama()` from `@schaefchens/shama-web/node` is Shama in Node – the core as WASM, settling texts (`start({ language, text })`) and recordings with your vocabulary, no device needed.
+- **Debugging:** `shama.setDebug({ diagnostics: true })` tells, through `shama.on('diagnostic', …)`, where audio comes from (device, rate, the system's processing), the meter in dBFS against the room's noise floor and the threshold of speech, each utterance as it is cut and how long recognizing took; `useDiagnostics()` gathers it for a view. With `keepAudio: true` the last 8 utterances stay in memory, as the recognizer got them, for `shama.recordings` to play, save as a WAV and hear again.
 - **Embedded models:** `node tools/models.mjs <folder> fa-rizeh tr-seda` fetches them, checked, into a folder per language; bundle it or download the same files, and pass the folders to `shama.languages({ models: { fa: …, tr: … } })`. Where the system has no recognizer for a language, Shama uses the model; `recognizer: 'os' | 'embedded'` chooses. A model's `shama-model.json` names its license and the credit it asks for.
 
-[examples/react-native](examples/react-native) and [examples/web](examples/web) are a whole app each: an audiobook reader's voice control in five languages, with a self-test.
+[examples/react-native](examples/react-native) and [examples/web](examples/web) are Shama's demo, an app each: an audiobook reader's voice control in five languages that shows all Shama tells for debugging – the microphone, the meter over the last seconds, each utterance to play, save and hear again with other settings, the endpointer's settings to try, which recognizer each language gets, a log – and runs the self-test. In a browser, a WAV can be heard too.
 
 ## How it works
 
@@ -99,7 +100,7 @@ if (result.kind === 'call') for (const call of result.calls) run(call);
 
 - No wake word: push-to-talk, or LIVE switched on.
 - Foreground only: an app that leaves the screen stops listening.
-- No recordings, no transcripts kept, nothing of what was said logged.
+- No recordings, no transcripts kept, nothing of what was said logged – unless an app turns on debugging.
 - Numbers up to 999; more languages need their rules in the core.
 
 ## Repository
@@ -126,7 +127,8 @@ November 2026:
 - **The core:** numbers 0–999 read back from every spelling in five languages; 131 rows of what recognizers might hear – near misses and speech not meant for the app among them – settled as they must be; the endpointer on synthesized speech, clicks and silence; the resampler keeps speech level and folds nothing back above 8 kHz (below −60 dB); recordings through the whole pipeline, push-to-talk and LIVE.
 - **The pipeline:** stage order, no AI before the device's stages; external AI blocked offline and in LIVE unless allowed; a confirmation never left to an AI; slow AIs given up on; LIVE's interrupts, pauses, quiet time and "stop listening"; both AI providers' requests and answers.
 - **The embedded models:** each catalogued model hears the measuring corpus's fixed commands – 8 of 9 for Persian, Turkish, German and English, 5 of 9 for Arabic – and through the core settles "pause" as the tool.
-- **The self-test** – recordings in five languages, nothing heard, a LIVE conversation, a turn settled by a fake AI, spoken commands heard by the system's recognizer and by an embedded model – passes through the core as WASM in Node, and in Chromium, Firefox and WebKit, where it skips the spoken commands. On the iOS 26.3 simulator Apple's recognizer heard English (the simulator has no other language on the device) and seda Turkish; on the Android 16 emulator Google's recognizer heard English, German and Turkish, and seda Turkish.
+- **Diagnostics:** the meter's loudness, peak, clipping, floor and threshold on known signals; what ended each utterance; audio kept across listening, saved as a WAV that is heard again, wiped when no longer kept. In Chromium, a recording as the microphone goes through the page's capture to the meter, an utterance kept, played and saved; on the Android emulator, its microphone is told and measured.
+- **The self-test** – recordings in five languages, nothing heard, a LIVE conversation, a turn settled by a fake AI, an utterance with diagnostics on and its audio saved, spoken commands heard by the system's recognizer and by an embedded model – passes through the core as WASM in Node, and in Chromium, Firefox and WebKit, where it skips the spoken commands. On the iOS 26.3 simulator Apple's recognizer heard English (the simulator has no other language on the device) and seda Turkish; on the Android 16 emulator Google's recognizer heard English, German and Turkish, and seda Turkish.
 - **Measured** ([engines.md](docs/engines.md)): recognizers on synthetic and real voices in five languages – fixed commands are heard well, names and numbers much less; no near miss or unrelated sentence was taken for a command.
 
 ## License

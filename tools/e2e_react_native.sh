@@ -1,7 +1,7 @@
 #!/bin/sh
-# Runs the React Native example's self-test on a simulator or emulator where the example is
-# installed: puts the embedded model the self-test uses where the example looks for it, then
-# runs the Maestro flow. Needs Maestro (and JAVA_HOME for it) and adb or Xcode.
+# Runs the React Native example's self-test, kept audio and diagnostics on a simulator or emulator
+# where the example is installed: puts the embedded model the self-test uses where the example
+# looks for it, then runs the Maestro flows. Needs Maestro (and JAVA_HOME for it) and adb or Xcode.
 #
 #   sh tools/e2e_react_native.sh ios <simulator UDID>
 #   sh tools/e2e_react_native.sh android <emulator serial>
@@ -26,4 +26,4 @@ case $platform in
     ;;
   *) echo "usage: sh tools/e2e_react_native.sh ios|android <device>" >&2; exit 1 ;;
 esac
-maestro --device "$device" test examples/react-native/e2e/self-test.yaml
+maestro --device "$device" test examples/react-native/e2e/self-test.yaml examples/react-native/e2e/recordings.yaml examples/react-native/e2e/diagnostics.yaml

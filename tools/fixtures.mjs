@@ -49,7 +49,7 @@ function spoken(language, text) {
   }
 }
 
-for (const fixture of cases.filter((fixture) => !fixture.text)) {
+for (const fixture of cases.filter((fixture) => !fixture.text && !fixture.recording)) {
   const samples = [];
   const transcripts = [];
   const add = (ms, said) => {

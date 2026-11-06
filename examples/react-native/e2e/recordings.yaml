@@ -1,0 +1,41 @@
+# Kept audio on a simulator or emulator, no microphone needed: a self-test recording heard as if
+# spoken, its utterance played back, saved as a WAV and heard again from it.
+appId: de.schaefchens.shama.example
+---
+- launchApp
+- repeat:
+    while:
+      visible: "Open in .*"
+    commands:
+      - tapOn: Cancel
+- tapOn:
+    id: tab-Listen
+- tapOn:
+    id: recording-en-open
+- extendedWaitUntil:
+    visible:
+      id: result
+      text: "open\\(book=moby, chapter=3\\) · deterministic"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "play-.*"
+- tapOn:
+    id: "play-.*"
+- tapOn:
+    id: "save-.*"
+- extendedWaitUntil:
+    visible:
+      id: "saved-.*"
+      text: ".*shama-recordings/shama-.*\\.wav"
+    timeout: 10000
+- tapOn:
+    id: "again-.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*#\\d+ · .* · ended by .*"
+    timeout: 15000
+- tapOn:
+    id: tab-Log
+- assertVisible:
+    text: "(?s).*input: file \\(file\\).*"

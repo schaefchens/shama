@@ -2,7 +2,7 @@
 // page has the microphone's stream, the voices and the built-in model.
 
 import { AiError, createShama } from '@schaefchens/shama';
-import type { Checked, Language, LanguageSupport, Port, PortEvent, Shama } from '@schaefchens/shama';
+import type { Checked, Language, LanguageSupport, Port, PortEvent, SavedRecording, Shama } from '@schaefchens/shama';
 import { startCapture } from './capture.ts';
 import type { Capture } from './capture.ts';
 import { modelAvailable, modelDecide, speak, stopSpeaking } from './device.ts';
@@ -20,6 +20,7 @@ export function createWebPort(options: WebPortOptions = {}): Port {
   const listeners = new Set<(event: PortEvent) => void>();
   let nextId = 1;
   let capture: Capture | null = null;
+  let playing: { context: AudioContext; done: () => void } | null = null;
 
   const emit = (event: PortEvent) => listeners.forEach((listener) => listener(event));
 
@@ -87,14 +88,20 @@ export function createWebPort(options: WebPortOptions = {}): Port {
         return;
       }
       stopCapture();
-      capture = await startCapture({ echoCancellation: listenOptions.echoCancellation ?? false });
+      const opened = (capture = await startCapture({ echoCancellation: listenOptions.echoCancellation ?? false }));
       try {
-        await call('listen', [JSON.stringify(listenOptions), capture.rate, capture.port], [capture.port]);
+        await call('listen', [JSON.stringify(listenOptions), opened.rate, opened.port], [opened.port]);
       } catch (error) {
         stopCapture();
         throw error;
       }
-      if (listenOptions.echoCancellation) emit({ event: 'echoCancellation', available: capture.echoCancellation });
+      opened.onEnded = () => {
+        if (capture !== opened) return;
+        stopCapture();
+        emit({ event: 'interrupted', reason: 'microphone' });
+      };
+      if (listenOptions.diagnostics) emit({ event: 'input', input: opened.input });
+      if (listenOptions.echoCancellation) emit({ event: 'echoCancellation', available: opened.echoCancellation });
     },
     async release() {
       await call('release');
@@ -113,6 +120,41 @@ export function createWebPort(options: WebPortOptions = {}): Port {
     },
     forget(id) {
       void call('forget', [id]);
+    },
+    async playRecording(id) {
+      port.stopPlaying();
+      const samples = await call<Float32Array | null>('recordingAudio', [id]);
+      if (!samples) throw new Error(`no audio kept for utterance ${id}`);
+      // Played as the recognizer got it: 16 kHz, the context resampling it for the speakers.
+      const context = new AudioContext();
+      const buffer = context.createBuffer(1, samples.length, 16_000);
+      buffer.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
+      samples.fill(0);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          if (playing?.context === context) playing = null;
+          void context.close();
+          resolve();
+        };
+        playing = { context, done };
+        source.onended = done;
+        source.start();
+      });
+    },
+    stopPlaying() {
+      playing?.done();
+    },
+    async saveRecording(id): Promise<SavedRecording> {
+      const wav = await call<Uint8Array | null>('recordingWav', [id]);
+      if (!wav) throw new Error(`no audio kept for utterance ${id}`);
+      const name = recordingName(id);
+      return { uri: URL.createObjectURL(new Blob([wav as Uint8Array<ArrayBuffer>], { type: 'audio/wav' })), name };
+    },
+    forgetRecordings() {
+      void call('forgetRecordings');
     },
     async finish(callToFinish) {
       return JSON.parse(await call<string>('finishCall', [JSON.stringify(callToFinish)]));
@@ -153,6 +195,13 @@ export function createWebPort(options: WebPortOptions = {}): Port {
     },
   };
   return port;
+}
+
+/** A saved recording's name: when, and which utterance. */
+export function recordingName(id: number, at = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const stamp = `${at.getFullYear()}${pad(at.getMonth() + 1)}${pad(at.getDate())}-${pad(at.getHours())}${pad(at.getMinutes())}${pad(at.getSeconds())}`;
+  return `shama-${stamp}-${id}.wav`;
 }
 
 /** Shama in the browser. */

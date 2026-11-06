@@ -10,6 +10,7 @@ public class ShamaModule: Module {
   private let queue = DispatchQueue(label: "de.schaefchens.shama", qos: .userInitiated)
   private let core = ShamaCore()
   private let speaker = Speaker()
+  private let playback = Playback()
   private let network = NWPathMonitor()
   private var online = true
   private var capture: Capture?
@@ -98,6 +99,44 @@ public class ShamaModule: Module {
       self.queue.async { self.core.forget(id: UInt32(id)) }
     }
 
+    // Utterances' audio kept for debugging: played here, saved to the app's documents – never to JS.
+    AsyncFunction("playRecording") { (id: Int, promise: Promise) in
+      guard let wav = self.queue.sync(execute: { self.core.recordingWav(id: UInt32(id)) }) else {
+        return promise.reject(Exception(name: "NoRecording", description: "no audio kept for utterance \(id)"))
+      }
+      DispatchQueue.main.async {
+        do {
+          try self.playback.play(wav, listening: self.capture != nil) { promise.resolve(nil) }
+        } catch {
+          promise.reject(Exception(name: "Playback", description: error.localizedDescription))
+        }
+      }
+    }
+
+    Function("stopPlaying") {
+      DispatchQueue.main.async { self.playback.stop() }
+    }
+
+    AsyncFunction("saveRecording") { (id: Int) -> [String: String] in
+      guard let wav = self.queue.sync(execute: { self.core.recordingWav(id: UInt32(id)) }) else {
+        throw Exception(name: "NoRecording", description: "no audio kept for utterance \(id)")
+      }
+      let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("shama-recordings", isDirectory: true)
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let formatter = DateFormatter()
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.dateFormat = "yyyyMMdd-HHmmss"
+      let name = "shama-\(formatter.string(from: Date()))-\(id).wav"
+      let url = folder.appendingPathComponent(name)
+      try wav.write(to: url, options: .atomic)
+      return ["uri": url.absoluteString, "name": name]
+    }
+
+    Function("forgetRecordings") {
+      self.queue.async { self.core.forgetRecordings() }
+    }
+
     AsyncFunction("finishCall") { (call: String) -> String in
       try self.queue.sync { try self.core.finishCall(call: call) }
     }
@@ -156,6 +195,7 @@ public class ShamaModule: Module {
     var file: String?
     var text: String?
     var recognizer: String?
+    var diagnostics: Bool?
   }
 
   private func listen(_ json: String) throws {
@@ -203,6 +243,12 @@ public class ShamaModule: Module {
       self?.stopCapture()
       self?.emit(["event": "interrupted", "reason": reason])
     }
+    if options.diagnostics == true {
+      capture.onRouteChange = { [weak self, weak capture] in
+        guard let capture else { return }
+        self?.emit(["event": "input", "input": capture.input()])
+      }
+    }
     let rate = try capture.prepare()
     try queue.sync {
       held = false
@@ -215,6 +261,9 @@ public class ShamaModule: Module {
       throw error
     }
     self.capture = capture
+    if options.diagnostics == true {
+      emit(["event": "input", "input": capture.input()])
+    }
     if live && options.echoCancellation == true {
       emit(["event": "echoCancellation", "available": capture.echoCancelled])
     }

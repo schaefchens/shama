@@ -277,3 +277,44 @@ test("LIVE speaks its questions and the AI's replies; an external AI only where 
   assert.deepEqual(port.spoken, ['Which chapter?', 'I can open books, nothing else.']);
   await shama.live.stop();
 });
+
+test('debugging: diagnostics reach the app, kept audio is played, saved and wiped', async () => {
+  const port = new FakePort();
+  const shama = createShama(port);
+  await shama.setVocabulary(vocabulary);
+  const told: string[] = [];
+  const levels: number[] = [];
+  shama.on('diagnostic', (event) => told.push(event.event));
+  shama.on('level', (level) => levels.push(level));
+  const meter = { level: 0.5, rmsDb: -30, peakDb: -24, clipped: false, floorDb: -58, thresholdDb: -38, phase: 'waiting' } as const;
+
+  // Off by default: nothing more is asked for, nothing more is told.
+  let pending = shama.start({ language: 'en' });
+  await settleDown();
+  assert.equal(port.listened[0].diagnostics, undefined);
+  assert.equal(port.listened[0].keepAudio, undefined);
+  port.emit({ event: 'level', level: 0.25 });
+  port.settle(deterministic({ kind: 'call', calls: [{ tool: 'open', args: { book: 'moby', chapter: 1 } }] }));
+  await pending;
+  assert.deepEqual(told, []);
+
+  shama.setDebug({ diagnostics: true, keepAudio: true });
+  pending = shama.start({ language: 'en' });
+  await settleDown();
+  assert.equal(port.listened[1].diagnostics, true);
+  assert.equal(port.listened[1].keepAudio, true);
+  port.emit({ event: 'input', input: { device: 'test', kind: 'builtIn', rate: 48000, channels: 1, processing: 'none', echoCancellation: false } });
+  port.emit({ event: 'meter', ...meter });
+  port.emit({ event: 'utterance', id: 2, startMs: 0, endMs: 900, speechMs: 600, cut: 'pause', kept: true });
+  port.settle(deterministic({ kind: 'call', calls: [{ tool: 'open', args: { book: 'moby', chapter: 2 } }] }));
+  await pending;
+  assert.deepEqual(told, ['input', 'meter', 'utterance', 'settled']);
+  // The meter moves the level as before.
+  assert.deepEqual(levels, [0.25, 0.5]);
+
+  await shama.recordings.play(2);
+  assert.equal((await shama.recordings.save(2)).name, '2.wav');
+  // Keeping no more audio wipes what was kept.
+  shama.setDebug({ diagnostics: true });
+  assert.deepEqual(port.log.slice(-3), ['play:2', 'save:2', 'forgetRecordings']);
+});

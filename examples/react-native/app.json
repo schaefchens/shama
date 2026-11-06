@@ -7,7 +7,11 @@
     "orientation": "default",
     "ios": {
       "bundleIdentifier": "de.schaefchens.shama.example",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
     },
     "android": {
       "package": "de.schaefchens.shama.example"

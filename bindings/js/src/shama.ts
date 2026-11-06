@@ -4,7 +4,7 @@
 
 import type { AiProvider } from './ai.ts';
 import { AiError } from './ai.ts';
-import type { ListenOptions, Endpointing, LanguageSupport, Port, PortEvent, RecognizerChoice } from './port.ts';
+import type { ListenOptions, Endpointing, LanguageSupport, Port, PortEvent, RecognizerChoice, SavedRecording } from './port.ts';
 import type {
   ArgValue,
   Call,
@@ -103,6 +103,24 @@ export interface LiveOptions {
   text?: string;
 }
 
+/** For debugging: what Shama tells, and keeps, beyond what an app needs. */
+export interface DebugOptions {
+  /** `diagnostic` events: where audio comes from, the meter in full, each utterance as it is cut. */
+  diagnostics?: boolean;
+  /** The last utterances' audio kept in memory, for `recordings` to play back or save. */
+  keepAudio?: boolean;
+}
+
+/** Utterances' audio kept for debugging, by the ids `diagnostic` events give them. */
+export interface Recordings {
+  play(id: number): Promise<void>;
+  stop(): void;
+  /** As a WAV: a file in the app's storage on a device, a link in a browser. */
+  save(id: number): Promise<SavedRecording>;
+  /** Wipes the kept audio. */
+  forget(): void;
+}
+
 export interface ShamaEvents {
   /** Before the microphone opens: the app pauses its voice. Awaited up to a second. */
   listeningStart: () => void | Promise<void>;
@@ -111,6 +129,8 @@ export interface ShamaEvents {
   result: (result: Result) => void;
   live: (live: { state: LiveState; reason?: LiveEnd }) => void;
   error: (error: ShamaError) => void;
+  /** With diagnostics on: every event of the platform's – the microphone, the meter, utterances, recognizers. */
+  diagnostic: (event: PortEvent) => void;
 }
 
 export interface Shama {
@@ -133,6 +153,9 @@ export interface Shama {
   /** Picks a pending choice by a button. */
   choose(index: number): Promise<Result | null>;
   reset(): void;
+  /** For debugging: diagnostics, and utterances' audio kept. Applies from the next listening on. */
+  setDebug(options: DebugOptions): void;
+  readonly recordings: Recordings;
   readonly pending: Pending | null;
   readonly live: Live;
   on<E extends keyof ShamaEvents>(event: E, listener: ShamaEvents[E]): () => void;
@@ -186,6 +209,7 @@ export function createShama(port: Port): Shama {
   let liveState: LiveState = 'off';
   let appVoice = false;
   let ownVoice = false;
+  let debug: DebugOptions = {};
   const resolvers: { resolver: Resolver; name: string; contexts?: string[] }[] = [];
   type Listener = (...args: never[]) => unknown;
   const listeners = new Map<keyof ShamaEvents, Set<Listener>>();
@@ -585,13 +609,16 @@ export function createShama(port: Port): Shama {
       partial,
       echoCancellation,
       transcripts: options.transcripts,
+      diagnostics: debug.diagnostics,
+      keepAudio: debug.keepAudio,
       file: options.file,
       text: options.text,
     };
   }
 
   port.subscribe((event) => {
-    if (event.event === 'level') {
+    if (debug.diagnostics) emit('diagnostic', event);
+    if (event.event === 'level' || event.event === 'meter') {
       emit('level', event.level);
       return;
     }
@@ -683,6 +710,16 @@ export function createShama(port: Port): Shama {
     },
     reset() {
       setPending(null);
+    },
+    setDebug(options) {
+      if (debug.keepAudio && !options.keepAudio) port.forgetRecordings();
+      debug = { ...options };
+    },
+    recordings: {
+      play: (id) => port.playRecording(id),
+      stop: () => port.stopPlaying(),
+      save: (id) => port.saveRecording(id),
+      forget: () => port.forgetRecordings(),
     },
     get pending() {
       return pending?.value ?? null;

@@ -1,0 +1,33 @@
+# The microphone with diagnostics on a simulator or emulator: hold to talk, then what Shama told
+# of the microphone, the meter, and the log. Whatever the device's microphone hears will do.
+appId: de.schaefchens.shama.example
+---
+- launchApp
+- repeat:
+    while:
+      visible: "Open in .*"
+    commands:
+      - tapOn: Cancel
+- tapOn:
+    id: tab-Listen
+- longPressOn:
+    id: talk
+# The permissions, asked for at the first press: the microphone, and on iOS speech recognition.
+- repeat:
+    times: 2
+    commands:
+      - tapOn:
+          text: "(Allow|OK|While using the app)"
+          optional: true
+- longPressOn:
+    id: talk
+- extendedWaitUntil:
+    visible:
+      id: input-device
+    timeout: 20000
+- assertVisible:
+    id: meter-graph
+- tapOn:
+    id: tab-Log
+- assertVisible:
+    text: "(?s).*input: .*"

@@ -3,6 +3,7 @@
 // with what must come of them. Shown by the examples, run by their end-to-end tests.
 
 import { fakeProvider } from './ai.ts';
+import type { PortEvent } from './port.ts';
 import type { Shama } from './shama.ts';
 import type { AiReply, Language, Localized, Result, Vocabulary } from './types.ts';
 
@@ -19,6 +20,10 @@ export interface SelfTestCase {
   recognizer?: 'os' | 'embedded';
   /** A fake AI's answer, for a case meant to reach stage 3. */
   ai?: AiReply;
+  /** Another case's recording, heard again. */
+  recording?: string;
+  /** With diagnostics on and audio kept: the input told, the meter, the utterance kept and saved. */
+  diagnostics?: boolean;
   expect: Partial<Result>[];
 }
 
@@ -68,7 +73,8 @@ export async function selfTest(
     shama.setAi(testCase.ai ? { brief: 'A test.', external: fakeProvider(() => testCase.ai as AiReply, { name: 'fake' }) } : null);
     let results: Result[];
     try {
-      results = await run(shama, testCase, options.file(`${testCase.name}.wav`));
+      const file = options.file(`${testCase.recording ?? testCase.name}.wav`);
+      results = testCase.diagnostics ? await diagnose(shama, testCase, file) : await run(shama, testCase, file);
     } catch (error) {
       results = [];
       line(`✗ ${testCase.name}: ${error instanceof Error ? error.message : String(error)}`);
@@ -109,6 +115,29 @@ async function run(shama: Shama, testCase: SelfTestCase, file: string): Promise<
     stopResults();
   }
   return results;
+}
+
+/** One utterance with diagnostics on: what the platform tells of it, and its audio saved. */
+async function diagnose(shama: Shama, testCase: SelfTestCase, file: string): Promise<Result[]> {
+  const told: PortEvent[] = [];
+  const stop = shama.on('diagnostic', (event) => told.push(event));
+  shama.setDebug({ diagnostics: true, keepAudio: true });
+  try {
+    const result = await shama.start({ language: testCase.language, file });
+    const input = told.find((event) => event.event === 'input');
+    const utterance = told.find((event) => event.event === 'utterance');
+    const problems: string[] = [];
+    if (input?.event !== 'input' || input.input.kind !== 'file') problems.push('no input told');
+    if (!told.some((event) => event.event === 'meter')) problems.push('no meter');
+    if (told.some((event) => event.event === 'level')) problems.push('a level, not the meter');
+    if (utterance?.event !== 'utterance' || !utterance.kept) problems.push('no utterance kept');
+    else if (!(await shama.recordings.save(utterance.id)).uri) problems.push('not saved');
+    if (problems.length > 0) throw new Error(problems.join(', '));
+    return [result];
+  } finally {
+    stop();
+    shama.setDebug({});
+  }
 }
 
 /** What differs between what must come and what came, or nothing. */

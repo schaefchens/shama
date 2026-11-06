@@ -88,13 +88,15 @@ pub fn read(bytes: &[u8]) -> Result<Wav, WavError> {
 
 /// Writes 16-bit PCM, one channel, with the transcripts in Shama's chunk.
 pub fn write(wav: &Wav) -> Vec<u8> {
-    let data: Vec<u8> = wav
-        .samples
-        .iter()
-        .flat_map(|sample| ((sample.clamp(-1.0, 1.0) * 32767.0).round() as i16).to_le_bytes())
-        .collect();
+    write_samples(wav.rate, &wav.samples, &wav.transcripts)
+}
+
+/// Writes samples as 16-bit PCM, one channel, with the transcripts in Shama's chunk.
+pub fn write_samples(rate: u32, samples: &[f32], transcripts: &[Transcript]) -> Vec<u8> {
+    let data: Vec<u8> =
+        samples.iter().flat_map(|sample| ((sample.clamp(-1.0, 1.0) * 32767.0).round() as i16).to_le_bytes()).collect();
     let transcripts =
-        if wav.transcripts.is_empty() { Vec::new() } else { serde_json::to_vec(&wav.transcripts).unwrap_or_default() };
+        if transcripts.is_empty() { Vec::new() } else { serde_json::to_vec(transcripts).unwrap_or_default() };
     let mut bytes = Vec::with_capacity(44 + data.len() + transcripts.len() + 9);
     let chunk = |bytes: &mut Vec<u8>, id: &[u8; 4], body: &[u8]| {
         bytes.extend_from_slice(id);
@@ -108,8 +110,8 @@ pub fn write(wav: &Wav) -> Vec<u8> {
     let mut format = Vec::with_capacity(16);
     format.extend_from_slice(&1u16.to_le_bytes());
     format.extend_from_slice(&1u16.to_le_bytes());
-    format.extend_from_slice(&wav.rate.to_le_bytes());
-    format.extend_from_slice(&(wav.rate * 2).to_le_bytes());
+    format.extend_from_slice(&rate.to_le_bytes());
+    format.extend_from_slice(&(rate * 2).to_le_bytes());
     format.extend_from_slice(&2u16.to_le_bytes());
     format.extend_from_slice(&16u16.to_le_bytes());
     chunk(&mut bytes, b"fmt ", &format);
