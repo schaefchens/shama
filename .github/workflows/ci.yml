@@ -114,6 +114,9 @@ jobs:
           npm run fixtures
           npx expo prebuild -p android --no-install
           cd android && ./gradlew app:assembleRelease -PreactNativeArchitectures=x86_64
+          # The build's daemons would hold gigabytes the emulator needs.
+          ./gradlew --stop
+          pkill -f KotlinCompileDaemon || true
       - name: Maestro, checked
         run: |
           curl -fsSL -o "$RUNNER_TEMP/maestro.zip" https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.12.0/maestro.zip

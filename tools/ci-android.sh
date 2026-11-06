@@ -6,10 +6,21 @@
 set -u
 cd "$(dirname "$0")/.."
 device=${1:-emulator-5554}
-log=${RUNNER_TEMP:-/tmp}/e2e.txt
+out=${RUNNER_TEMP:-/tmp}
 adb -s "$device" install -r examples/react-native/android/app/build/outputs/apk/release/app-release.apk || exit 1
-sh tools/e2e_react_native.sh android "$device" > "$log" 2>&1
+# The device's log all along: what it said last, should it go away.
+adb -s "$device" logcat -v time > "$out/logcat.txt" 2>&1 &
+logcat=$!
+sh tools/e2e_react_native.sh android "$device" > "$out/e2e.txt" 2>&1
 status=$?
-cat "$log"
-[ $status = 0 ] || node tools/e2e-why.mjs "$log"
+kill $logcat 2> /dev/null
+cat "$out/e2e.txt"
+if [ $status != 0 ]; then
+  {
+    echo "device: $(adb -s "$device" get-state 2>&1)"
+    free -m 2> /dev/null | sed -n 2p
+    sudo -n dmesg 2> /dev/null | grep -iE "out of memory|killed process" | tail -3
+  } > "$out/host.txt"
+  node tools/e2e-why.mjs "$out/e2e.txt" "" "$out/host.txt" "$out/logcat.txt"
+fi
 exit $status
