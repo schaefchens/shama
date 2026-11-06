@@ -45,7 +45,8 @@ function Demo() {
   useEffect(() => shama.setMode(settings.mode), [shama, settings.mode]);
   useEffect(() => shama.setDebug({ diagnostics: settings.diagnostics, keepAudio: settings.keepAudio }), [shama, settings.diagnostics, settings.keepAudio]);
   const refresh = useCallback(() => void shama.languages().then(setSupport, (e: Error) => setError(e.message)), [shama]);
-  useEffect(refresh, [refresh]);
+  // Again with each language: an engine configured meanwhile is found.
+  useEffect(refresh, [refresh, settings.language]);
 
   return (
     <main dir={rtl(settings.language) ? 'rtl' : 'ltr'}>

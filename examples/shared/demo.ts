@@ -18,6 +18,15 @@ export const hints: Record<Language, string> = {
   fa: '«موبی دیک فصل سه را بخوان»، «فصل بعد»، «تندتر»، «بایست»',
 };
 
+/** The embedded model engines/sherpa/models.json has for each language. */
+export const modelFor: Record<Language, string> = {
+  en: 'en-parakeet',
+  de: 'de-fastconformer',
+  tr: 'tr-seda',
+  ar: 'ar-whisper-small',
+  fa: 'fa-rizeh',
+};
+
 /** What the read-aloud stand-in reads, per language: the app's own voice, to interrupt. */
 export const passage: Record<Language, string> = {
   en: 'Call me Ishmael. Some years ago, never mind how long precisely, having little or no money in my purse, I thought I would sail about a little and see the watery part of the world.',

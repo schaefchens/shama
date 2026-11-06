@@ -9,7 +9,7 @@ import { Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import type { LanguageSupport, Result, SavedRecording } from '@schaefchens/shama';
 import { describeCall, describeResult, useListening, useLive, usePushToTalk, useShama } from '@schaefchens/shama-react';
 import type { Diagnostics, UtteranceInfo } from '@schaefchens/shama-react';
-import { hints, languages, liveDefaults, passage, seconds } from '../../shared/demo';
+import { hints, languages, liveDefaults, modelFor, passage, seconds } from '../../shared/demo';
 import type { DemoSettings } from '../../shared/demo';
 import { fixtures } from './fixtures';
 import { InputPanel, MeterPanel } from './Microphone';
@@ -86,6 +86,12 @@ export function Listen({ settings, update, diagnostics, support, onError }: Prop
           <Chip key={r} label={r === 'auto' ? `auto (${support.find((s) => s.language === language)?.recognizer ?? '…'})` : r} selected={recognizer === r} onPress={() => update({ recognizer: r })} />
         ))}
       </Row>
+      {support.find((s) => s.language === language)?.recognizer === 'none' && (
+        <T small style={{ color: palette.threshold }} testID="no-recognizer">
+          Nothing here hears {language}: the system has no recognizer for it on the device, and there is no embedded model. Put one in
+          the app's shama-models/{language} – `node tools/models.mjs &lt;folder&gt; {modelFor[language]}` – or try a recording below.
+        </T>
+      )}
       <T muted small>
         Try {hints[language]}.
       </T>

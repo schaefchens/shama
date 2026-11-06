@@ -76,7 +76,8 @@ function Demo() {
     const models = Object.fromEntries(languages.map((language) => [language, `${modelsFolder}/${language}`]));
     shama.languages({ models }).then(setSupport, (e: Error) => setError(e.message));
   }, [shama]);
-  useEffect(refresh, [refresh]);
+  // Again with each language: a model put in place meanwhile is found.
+  useEffect(refresh, [refresh, settings.language]);
 
   const show = (name: Tab) => (tab === name ? undefined : styles.hidden);
   return (
