@@ -29,13 +29,19 @@ case $platform in
     ;;
   *) echo "usage: sh tools/e2e_react_native.sh ios|android <device>" >&2; exit 1 ;;
 esac
-# An emulator under load may drop off adb for a moment: before each flow, wait until it is back.
+# An emulator under load may drop off adb for a while, its system restarting: before each flow,
+# wait – up to three minutes – until adb reaches it and Android's activity service answers.
 reachable() {
   [ $platform = android ] || return 0
-  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
-    [ "$(adb -s "$device" get-state 2> /dev/null)" = device ] && return 0
+  tries=0
+  while [ $tries -lt 90 ]; do
+    if [ "$(adb -s "$device" get-state 2> /dev/null)" = device ] &&
+      adb -s "$device" shell service check activity 2> /dev/null | grep -q ": found"; then
+      return 0
+    fi
     adb reconnect offline > /dev/null 2>&1
     sleep 2
+    tries=$((tries + 1))
   done
   return 1
 }

@@ -18,10 +18,15 @@ status=$?
 kill $logcat 2> /dev/null
 cat "$out/e2e.txt"
 if [ $status != 0 ]; then
+  # Where the device went: its state, how long it has run, whether Android's system restarted or
+  # crashed – and the host's memory and its killer.
   {
     echo "device: $(adb -s "$device" get-state 2>&1)"
+    echo "uptime: $(adb -s "$device" shell uptime 2>&1)"
     free -m 2> /dev/null | sed -n 2p
     sudo -n dmesg 2> /dev/null | grep -iE "out of memory|killed process" | tail -3
+    adb -s "$device" shell "logcat -b events -d | grep -E 'boot_progress_start|am_crash|watchdog|am_anr'" 2>&1 | tail -8
+    adb -s "$device" shell logcat -b crash -d 2>&1 | grep -vE "^-+ beginning" | tail -12
   } > "$out/host.txt"
   node tools/e2e-why.mjs "$out/e2e.txt" "" "$out/host.txt" "$out/logcat.txt"
 fi

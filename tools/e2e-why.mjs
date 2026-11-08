@@ -16,7 +16,7 @@ const runOf = (flow) => (given ? given : byAge(runs).find((run) => existsSync(jo
 
 // GitHub takes ten error annotations a step: three for the flows, the rest for each one's why.
 const notes = [];
-const note = (title, text) => notes.length < 10 && notes.push(`::error title=${title}::${escape(text.trim().slice(0, 600))}`);
+const note = (title, text, length = 600) => notes.length < 10 && notes.push(`::error title=${title}::${escape(text.trim().slice(0, length))}`);
 const escape = (text) => text.replaceAll('%', '%25').replaceAll('\r', '').replaceAll('\n', '%0A');
 
 const failed = readFileSync(output, 'utf8')
@@ -28,8 +28,10 @@ for (const line of failed.slice(0, 3)) note('Maestro', line);
 // The device gone: whether it was still there, the host's memory and its killer, its last words.
 const lines = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8').split('\n').filter(Boolean) : []);
 const hostNotes = lines(host);
-if (hostNotes.length) note('Device', hostNotes.join('\n'));
-if (hostNotes.length && !hostNotes[0].endsWith(' device')) note('Device log, last', lines(devicelog).slice(-12).join('\n'));
+if (hostNotes.length) note('Device', hostNotes.join('\n'), 2400);
+// The device log's last lines: what it said before it went away – the log stops there.
+const offline = !hostNotes[0]?.endsWith(' device') || readFileSync(output, 'utf8').includes('offline');
+if (hostNotes.length && offline) note('Device log, last', lines(devicelog).slice(-20).join('\n'), 2400);
 
 for (const line of failed) {
   const flow = line.match(/^\[Failed\] (\S+)/)?.[1];
